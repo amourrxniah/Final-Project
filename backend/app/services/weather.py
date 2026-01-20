@@ -1,17 +1,19 @@
 import requests
-from config import WEATHERSTACK_API_KEY
+from app.config import WEATHERSTACK_API_KEY
 
-def get_weather(city="London"):
+
+def get_weather(lat: float, lon: float):
     url = "http://api.weatherstack.com/current"
     params = {
         "access_key": WEATHERSTACK_API_KEY,
-        "query": city
+        "query": f"{lat}, {lon}",
+        "units": "m"
     }
 
-    response = requests.get(url, params=params)
-    data = response.json()
+    res = requests.get(url, params=params)
+    data = res.json()
     
     return {
-        "temperature": data["current"]["temperature"],
-        "condition": data["current"]["weather_descriptions"][0]
+        "condition": data["current"]["weather_descriptions"][0],
+        "temperature": data["current"]["temperature"]
     }

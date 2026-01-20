@@ -1,8 +1,10 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { Animated } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { Rect, Text as SvgText, Path, Circle } from "react-native-svg";
 
 export default function HomeScreen({ navigation }) {
     const [name, setName] = useState("User");
@@ -26,34 +28,28 @@ export default function HomeScreen({ navigation }) {
                     <View style={styles.profileIcon}>
                         <MaterialCommunityIcons name="account-outline" size={50} color="#fff" ></MaterialCommunityIcons>
                     </View>
-
                     <View>
                         <Text style={styles.welcome}>Welcome Back</Text>
-                        <Text style={styles.name}>{name || "User"}</Text>
+                        <Text style={styles.name}>{name}</Text>
                     </View>
                 </View>
                 
-                {/* ACTIVITY CARD */}
-                <LinearGradient
-                    colors={["#b36bff", "#ff4fa3"]}
-                    style={styles.readyCard}
-                >
+                {/* READY CARD */}
+                <LinearGradient colors={["#b36bff", "#ff4fa3"]} style={styles.readyCard}>
                     <View style={styles.readyHeader}>
                         <MaterialCommunityIcons 
                             name="star-four-points" 
                             size={34} 
                             color="#fff"
                         />
-                        <Text style={styles.readyTitle}>
-                            Ready for your next activity
-                        </Text>
+                        <Text style={styles.readyTitle}>Ready for your next activity </Text>
                     </View>
 
                     <Text style={styles.readyDescription}>
                         Log your current mood and we'll find the perfect activity for you
                     </Text>
 
-                    <TouchableOpacity style={styles.moodButton}>
+                    <TouchableOpacity style={styles.moodButton} onPress={() => navigation.navigate("MoodInput")}>
                         <Text style={styles.moodButtonText}>Start Mood Log</Text>
                     </TouchableOpacity>
                 </LinearGradient>
@@ -65,110 +61,90 @@ export default function HomeScreen({ navigation }) {
                     <StatCard icon="battery-low" label="Most Common" color="#4dabf7" />
                 </View>
 
-                {/* TREND */}
-                <View style={styles.trendHeader}>
-                    <MaterialCommunityIcons
-                        name="trending-up"
-                        size={35}
-                        color="#ba55d3"
-                    />
-                    <Text style={styles.sectionTitle}>7 Day Mood Trend</Text>
-                </View>
-                
-                <View style={styles.moodTable}>
-                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
-                        <View key={day} style={styles.moodCell}>
-                            <Text style={styles.moodDot} />
-                            <Text style={styles.day}>{day}</Text>
-                        </View>
-                    ))}
-                </View>
+                {/* 7 DAY MOOD TREND */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <MaterialCommunityIcons
+                            name="trending-up"
+                            size={35}
+                            color="#ba55d3"
+                        />
+                        <Text style={styles.cardTitle}>7 Day Mood Trend</Text>
+                    </View>
 
-                <View style={styles.legendRow}>
-                    <Legend color="#4dabf7" label="Low" />
-                    <Legend color="#9b5de5" label="Neutral" />
-                    <Legend color="#ff4fa3" label="High" />
+                    <MoodFrequencyGraph
+                        data={[
+                            { day: "Mon", value: 0},
+                            { day: "Tue", value: 1},
+                            { day: "Wed", value: 0},
+                            { day: "Thu", value: 2},
+                            { day: "Fri", value: 1},
+                            { day: "Sat", value: 0},
+                            { day: "Sun", value: 0}
+                        ]}
+                    />
+
+                    {/* LEGEND */}
+                    <View style={styles.legendRow}>
+                        <Legend color="#4dabf7" label="Low" />
+                        <Legend color="#9b5de5" label="Neutral" />
+                        <Legend color="#ff4fa3" label="High" />
+                    </View>
                 </View>
 
                 {/* RECENT ACTIVITY */}
-                <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons 
-                        name="calendar-blank-outline" 
-                        size={30} 
-                        color="#9b5de5"
-                    />
-                    <Text style={styles.sectionTitle}>Recent Activity</Text>
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <MaterialCommunityIcons 
+                            name="calendar-blank-outline" 
+                            size={35} 
+                            color="#9b5de5"
+                        />
+                        <Text style={styles.cardTitle}>Recent Activity</Text>
+                    </View>
+
+                    <ActivityRow title="Low Energy" sub="9:41 PM" tag="Evening" tagStyle={styles.tagNeutral} topBorder />
+                    <ActivityRow title="Coffee & Co" sub="2 days ago" tag="Enjoyed" tagStyle={styles.tagSuccess} />
+                    <ActivityRow title="Cinema - Latest Releases" sub="1 week ago" tag="Skipped" tagStyle={styles.tagDanger} />
                 </View>
-
-                <View style={styles.activityContainer}>
-
-                    {/* ROW 1 */}
-                    <View style={styles.activityRow}>
-                        <View style={styles.activityLeft}>
-                            <Text style={styles.activityTitle}>Low Energy</Text>
-                            <Text style={styles.activitySub}>9:41 PM</Text>
-                        </View>
-
-                        <View style={styles.tagNeutral}>
-                            <Text style={styles.tagText}>Evening</Text>
-                        </View>
-                    </View>
-
-                    {/* ROW 2 */}
-                    <View style={styles.activityRow}>
-                        <View style={styles.activityLeft}>
-                            <Text style={styles.activityTitle}>Coffee & Co</Text>
-                            <Text style={styles.activitySub}>2 days ago</Text>
-                        </View>
-
-                        <View style={styles.tagSuccess}>
-                            <Text style={styles.tagText}>Enjoyed</Text>
-                        </View>
-                    </View>
-
-                    {/* ROW 3 */}
-                    <View style={styles.activityRow}>
-                        <View style={styles.activityLeft}>
-                            <Text style={styles.activityTitle}>Cinema - Latest Releases</Text>
-                            <Text style={styles.activitySub}>1 week ago</Text>
-                        </View>
-
-                        <View style={styles.tagDanger}>
-                            <Text style={styles.tagText}>Skipped</Text>
-                        </View>
-                    </View>
-                </View>
-
-
+                
                 {/* INSIGHTS */}
-                <Text style={styles.sectionTitle}>Insights</Text>
-                <View style={styles.insightBox}>
-                    <Text style={styles.insightText}>
-                        You're on a 1-day streak! Keep it up!
-                    </Text>
-                    <Text style={styles.insightSub}>
-                        Keep loggin your mood to unlock personalised insights
-                    </Text>
-                </View>
+                <View style={[styles.card, styles.insightsCard]}>
+                    <View style={styles.cardHeader}>
+                        <MaterialCommunityIcons name="lightbulb-on-outline" size={35} color="#f4c430"/>
+                        <Text style={styles.cardTitle}>Insights</Text>
+                    </View>
 
+                    <View style={styles.insightRow}>
+                        <MaterialCommunityIcons name="fire" size={30} color="#ff6b35"/>
+                        <Text style={styles.insightText}>
+                            You're on a 1-day streak! Keep it up!
+                        </Text>
+                    </View>
+
+                    <View style={styles.insightRow}>
+                        <MaterialCommunityIcons name="flare" size={30} color="#dc143c"/>
+                        <Text style={styles.insightText}>
+                            Keep logging your mood to unlock personalised insights
+                        </Text>
+                    </View>
+                </View>
             </ScrollView>
 
             {/* BOTTOM NAV */}
             <View style={styles.navWrapper}>
                 <View style={styles.navBar}>
                     <NavIcon name="home" active />
-                    <NavIcon name="star-outline" />
+                    <NavIcon name="star-outline" onPress={() => navigation.navigate("MoodInput")} />
                     <NavIcon name="bookmark-outline" />
                     <NavIcon name="account-outline" />
                     <NavIcon name="cog-outline" />
                 </View>       
             </View>
-
         </View>
     );
 }
-
-function StatCard({ icon, label, color, value = "0" }) {
+    function StatCard({ icon, label, color, value = "0" }) {
     return (
         <View style={styles.statCard}>
             <MaterialCommunityIcons 
@@ -181,9 +157,9 @@ function StatCard({ icon, label, color, value = "0" }) {
     );
 }
 
-function NavIcon ({ name, active }) {
+function NavIcon ({ name, active, onPress }) {
     return (
-        <TouchableOpacity style={styles.navIcon}>
+        <TouchableOpacity style={styles.navIcon} onPress={onPress}>
             <MaterialCommunityIcons name={name} size={45} color={active ? "#9b5de5" : "#aaa"}/>
         </TouchableOpacity>
     );
@@ -191,29 +167,154 @@ function NavIcon ({ name, active }) {
 
 function Legend ({ color, label }) {
     return (
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View style={{
-                width: 10,
-                height: 10,
-                borderRadius: 5,
-                backgroundColor: color,
-                marginRight: 6
-            }} />
-            <Text style={{ fontSize: 12, color: "#666" }}>{label}</Text>
+        <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: color }]} />
+            <Text style={styles.legendText}>{label}</Text>
         </View>
-    )
+    );
+}
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+function MoodFrequencyGraph({ data }) {
+    const maxValue = 3;
+    const chartWidth = 320;
+    const chartHeight = 190;
+    const padding = 36;
+
+    const stepX = (chartWidth - padding * 2) / (data.length - 1);
+    const stepY = (chartHeight - padding * 2) / maxValue;
+
+    //animation values
+    const anim = useRef(data.map(() => new Animated.Value(0))).current;
+
+    useEffect(() => {
+        Animated.stagger(
+            120,
+            anim.map(a =>
+                Animated.spring(a, {
+                    toValue: 1,
+                    useNativeDriver: true
+                })
+            )
+        ).start();
+    }, []);
+
+    const getColor = value => {
+        if (value === 0) return "#4dabf7"; //low
+        if (value === 1) return "#9b5de5"; //neutral
+        return "#ff4fa3"; //high
+    };
+
+    const points = data.map((item, index) => {
+        const x = padding + index * stepX;
+        const y = chartHeight - padding - item.value * stepY;
+        return { x, y, value: item.value};
+    });
+
+    const linePath = points
+        .map((p, i) =>`${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+        .join(" ");
+
+    return (
+        <View style={{ alignItems: "center" }}>
+            <Svg width={chartWidth} height={chartHeight}>
+
+                {/* Y AXIS */}
+                {[0, 1, 2, 3].map(v => (
+                    <SvgText
+                        key={v}
+                        x={8}
+                        y={chartHeight - padding - v * stepY + 4}
+                        fontSize="12"
+                        fill="#888" 
+                    >
+                        {v}
+                    </SvgText>
+                ))}
+
+                {/* GRID */}
+                {[0, 1, 2, 3].map(v => (
+                    <Rect
+                        key={v}
+                        x={padding}
+                        y={chartHeight - padding - v * stepY}
+                        width={chartWidth - padding * 2}
+                        height="1"
+                        fill="#eaeaea" 
+                    /> 
+                ))}
+
+                {/* SMOOTH LINE */}
+                <Path
+                    d={linePath}
+                    fill="none"
+                    stroke="#9b5de5"
+                    strokeWidth={4}
+                    strokeLinecap="round"
+                />
+
+                {/* DOTS */}
+                {points.map((p, index) => (
+                    <AnimatedCircle
+                        key={index}
+                        cx={p.x}
+                        cy={p.y}
+                        r={6}
+                        fill={getColor(p.value)}
+                        style={{
+                            opacity: anim[index],
+                            transform: [{ scale: anim[index] }]
+                        }}
+                    />
+
+                ))}
+
+                {/* X AXIS */}
+                {data.map((item, index) => (
+                    <SvgText
+                        key={item.day}
+                        x={padding + index * stepX}
+                        y={chartHeight - 6}
+                        fontSize="12"
+                        fill="#666"
+                        textAnchor="middle"
+                    >
+                        {item.day}
+                    </SvgText>
+                ))}
+            </Svg>
+        </View>
+    );
+}
+
+function ActivityRow({ title, sub, tag, tagStyle, topBorder = true }) {
+    return (
+        <View style={[
+            styles.activityRow, 
+            topBorder && { borderTopWidth: 2 },
+            !topBorder && { borderTopWidth: 0 }
+        ]}>
+            <View style={styles.activityLeft}>
+                <Text style={styles.activityTitle}>{title}</Text>
+                <Text style={styles.activitySub}>{sub}</Text>
+            </View>
+            <View style={tagStyle}>
+                <Text style={styles.tagText}>{tag}</Text>
+            </View>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#f8f9ff"
+        backgroundColor: "#f0f8ff"
     },
 
     content: {
         padding: 20,
-        paddingBottom: 160,
+        paddingBottom: 80,
         marginTop: 23
     },
 
@@ -243,7 +344,7 @@ const styles = StyleSheet.create({
     },
 
     name: {
-        fontSize: 22,
+        fontSize: 23,
         fontWeight: "600"
     },
 
@@ -264,13 +365,13 @@ const styles = StyleSheet.create({
     readyTitle: {
         color: "#fff",
         fontWeight: "600",
-        fontSize: 20,
+        fontSize: 21,
         marginLeft: 10
     },
 
     readyDescription: {
         color: "#f5f5f5",
-        fontSize: 17,
+        fontSize: 18,
         lineHeight: 20,
         textAlign: "center",
         marginBottom: 10
@@ -296,98 +397,89 @@ const styles = StyleSheet.create({
         marginBottom: 25
     },
 
-    statBox: {
-        width: "30%",
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: "#ddd",
-        padding: 12
-    },
-
     statCard: {
         width: "31%",
         borderRadius: 14,
         borderWidth: 1,
         borderColor: "#e0e0e0",
-        padding: 12
+        padding: 12,
+        backgroundColor: "#fff"
     },
 
     statValue: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: "700",
         marginTop: 8
     },
 
     statLabel: {
-        fontSize: 12,
-        fontWeight: "500"
+        fontSize: 12.5,
+        fontWeight: "500",
+        marginTop: 3
     },
 
-    statSub: {
-        fontSize: 10,
-        color: "#888"
+    card: {
+        backgroundColor: "#fff",
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 22
     },
 
-    trendHeader: {},
-
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        marginBottom: 10
-    },
-
-    moodTable: {
+    cardHeader: {
         flexDirection: "row",
-        justifyContent: "space-between"
+        alignItems: "center",
+        marginBottom: 14
     },
 
-    moodCell: {
+    cardTitle: {
+        fontSize: 21,
+        fontWeight: "600",
+        marginLeft: 8
+    },
+
+    legendRow: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        marginTop: 14
+    },
+
+    legendItem: {
+        flexDirection: "row",
         alignItems: "center"
     },
 
-    day: {
-        fontSize: 12,
-        color: "#666",
-        marginBottom: 6
+    legendDot: {
+        width: 15,
+        height: 15,
+        borderRadius: 5,
+        marginRight: 6
     },
 
-    moodDot: {
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: "#b36bff"
-    },
-
-    activityContainer: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 14,
-        marginBottom: 20
+    legendText: {
+        fontSize: 14,
+        color: "#666"
     },
 
     activityRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        alignContent: "center",
+        alignItems: "center",
         paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBlockColor: "#f0f0f0"
+        borderColor: "#f0f0f0"
     },
 
     activityLeft: {
-        flex: 1,
-        marginRight: 10
+        flex: 1
     },
 
     activityTitle: {
-        fontSize: 14,
-        fontWeight: "600"
+        fontSize: 17,
+        fontWeight: "500"
     },
 
     activitySub: {
-        fontSize: 12,
-        color: "#888",
-        marginTop: 2
+        fontSize: 14,
+        color: "#888"
     },
 
     tagNeutral: {
@@ -412,25 +504,26 @@ const styles = StyleSheet.create({
     },
 
     tagText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#111"
-    },
-
-    insightBox: {
-        backgroundColor: "#eae8ff",
-        padding: 14,
-        borderRadius: 12
-    },
-
-    insightText: {
+        fontSize: 16,
         fontWeight: "600"
     },
 
-    insightSub: {
-        fontSize: 12,
-        color: "#555",
-        marginTop: 4
+    insightsCard: {
+        backgroundColor: "#f1ecff"
+    },
+
+    insightRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 10
+    },
+
+    insightText: {
+        marginLeft: 10,
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#6a5acd",
+        flex: 1
     },
 
     navWrapper: {
@@ -445,7 +538,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
         borderRadius: 28,
         borderWidth: 2,
-        borderColor: "#e0e0e0",
+        borderColor: "#eee",
         paddingHorizontal: 16,
         paddingVertical: 10
     },

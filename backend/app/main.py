@@ -1,21 +1,29 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.database import engine, Base
+from app.routers.chat import router as chat_router
+from pydantic import BaseModel
+from typing import List, Optional
+from app.services.chatbot import get_ai_response
 from services.weather import get_weather
-from services.activities import get_nearby_activities
-from recommender import recommend
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="MoodSync API")
 
-@app.get("/recommend")
-def get_recommendation(
-    mood: str,
-    lat: float,
-    lon: float
-):
-    weather = get_weather()
-    activities = get_nearby_activities(lat, lon)
-    recommendations = recommend(mood, weather["condition"], activities)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(chat_router)
+
+@app.get("/context")
+def get_context(lat: float, lon: float):
+    weather = get_weather(lat, lon)
 
     return {
-        "weather": weather,
-        "recommendations": recommendations
+        "weather": weather
     }
