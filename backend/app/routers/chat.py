@@ -1,45 +1,40 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from app.database import SessionLocal
-from app.schemas.chat import ChatRequest, ChatResponse
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import List
+
 from app.services.chatbot import get_ai_response
 from app.models.chat import ChatMessage
+from app.database import SessionLocal
 
-router = APIRouter()
+router = APIRouter(prefix="/chat", tags=["Chat"])
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+class Message(BaseModel):
+    role: str
+    content: str
 
-@router.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest, db: Session = Depends(get_db)):
+class ChatRequest(BaseModel):
+    session_id: str
+    mood: str
+    messages: List[Message]
+
+class ChatResponse(BaseModel):
+    reply: str
+
+@router.post("/", response_model=ChatResponse)
+def chat(request: ChatRequest):
     
     #save user messages
-    for m in req.messages:
-        db.add(ChatMessage(
-            session_id=req.session_id,
+    db = SessionLocal()
+    for m in request.messages:
+        db_msg = ChatMessage(
+            session_id=request.session_id,
             role=m.role,
             content=m.content,
-            mood=req.mood
-        ))
-
+            mood=request.mood
+        )
+        db.add(db_msg)
     db.commit()
 
-    reply = get_ai_response(
-        messages=[m.dict() for m in req.messages],
-        mood=req.mood
-    )
-
-    #save ai reply 
-    db.add(ChatMessage(
-        session_id=req.session_id,
-        role="assistant",
-        content=reply,
-        mood=req.mood
-    ))
-    db.commit()
+    reply = get_ai_response([m.dict() for m in request.messages], request.mood)
 
     return {"reply": reply}

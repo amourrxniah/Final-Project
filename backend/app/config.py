@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-WEATHERSTACK_API_KEY = os.getenv("WEATHERSTACK_API_KEY")
+OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY")
 OPENTRIPMAP_API_KEY = os.getenv("OPENTRIPMAP_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

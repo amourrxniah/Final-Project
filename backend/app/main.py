@@ -2,10 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.routers.chat import router as chat_router
-from pydantic import BaseModel
-from typing import List, Optional
-from app.services.chatbot import get_ai_response
-from services.weather import get_weather
+from app.routers.context import router as context_router
+from app.services.weather import get_weather
+from app.routers import recommendations
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,11 +18,5 @@ app.add_middleware(
 )
 
 app.include_router(chat_router)
-
-@app.get("/context")
-def get_context(lat: float, lon: float):
-    weather = get_weather(lat, lon)
-
-    return {
-        "weather": weather
-    }
+app.include_router(context_router)
+app.include_router(recommendations.router)
