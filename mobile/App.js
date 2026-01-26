@@ -7,6 +7,8 @@ import ManualSignupScreen from './src/screens/ManualSignupScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import MoodInputScreen from './src/screens/MoodInputScreen';
 import DetectedContextScreen from './src/screens/DetectedContextScreen';
+import OverviewScreen from './src/screens/OverviewScreen';
+import RecommendationsScreen from './src/screens/RecommendationsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,6 +23,8 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="MoodInput" component={MoodInputScreen} />
         <Stack.Screen name="DetectedContext" component={DetectedContextScreen} />
+        <Stack.Screen name="Overview" component={OverviewScreen} />
+        <Stack.Screen name="Recommendations" component={RecommendationsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
