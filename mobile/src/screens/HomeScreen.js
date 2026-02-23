@@ -6,14 +6,31 @@ import { Animated } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Rect, Text as SvgText, Path, Circle } from "react-native-svg";
 import BottomNav from "../components/BottomNav";
+import axios from "axios";
+
+const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
 
 export default function HomeScreen({ navigation }) {
     const [name, setName] = useState("User");
 
     useEffect(() => {
         const loadUser = async () => {
-            const stored = await AsyncStorage.getItem("user");
-            if (stored) setName(JSON.parse(stored).name || "User");           
+            try {
+                const token = await AsyncStorage.getItem("token");
+
+                if (!token) return;
+
+                const res = await axios.get(`${BACKEND_URL}/auth/me`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                setName(res.data.username || res.data.name || "User");
+            } catch (err) {
+                console.log("User load failed", err);
+                setName("User");
+            }
         };
         loadUser();
     }, []);

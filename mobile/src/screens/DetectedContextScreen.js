@@ -41,9 +41,16 @@ export default function DetectedContextScreen({ navigation }) {
     /* TIME OF DAY */
     const detectTime = () => {
         const hour = new Date().getHours();
-        if (hour < 12) setTimeOfDay("Morning");
-        else if (hour < 18) setTimeOfDay("Afternoon");
-        else setTimeOfDay("Evening");
+
+        if (hour >= 5 && hour < 11) {
+            setTimeOfDay("morning");
+        } else if (hour >= 11 && hour < 16) {
+            setTimeOfDay("afternoon");
+        } else if (hour >= 16 && hour < 21) {
+            setTimeOfDay("evening");
+        } else {
+            setTimeOfDay("night");
+        }
     };
 
     /* LOCATION + WEATHER */
@@ -79,22 +86,33 @@ export default function DetectedContextScreen({ navigation }) {
     }
 
     const getTimeConfig = () => {
-        if (timeOfDay === "Morning") {
-            return {
-                icon: "weather-sunset-up",
-                colors: ["#ffe29f", "#ffa99f"]
-            };
+        switch (timeOfDay) {
+            case "morning":
+                return {
+                    icon: "weather-sunset-up",
+                    colors: ["#ffe29f", "#ffa99f"]
+                };
+            case "afternoon":
+                return {
+                    icon: "weather-sunny",
+                    colors: ["#ffd194", "#ff6a88"]
+                };
+            case "evening":
+                return {
+                    icon: "weather-sunset-down",
+                    colors: ["#667eea", "#764ba2"]
+                };
+            case "night":
+                return {
+                    icon: "weather-night",
+                    colors: ["#0f2027", "#203a43"]
+                };
+            default:
+                return {
+                    icon: "clock-outline",
+                    colors: ["#b993d6", "#8ca6db"]
+                };
         }
-        if (timeOfDay === "Afternoon") {
-            return {
-                icon: "weather-sunny",
-                colors: ["#ffd194", "#ff6a88"]
-            };
-        }
-        return {
-            icon: "weather-night",
-            colors: ["#667eea", "#764ba2"]
-        };
     }
 
     const getWeatherConfig = () => {
@@ -187,7 +205,7 @@ export default function DetectedContextScreen({ navigation }) {
                     />
                     <View>
                         <Text style={styles.cardLabel}>Time of Day</Text>
-                        <Text style={styles.cardValue}>{timeOfDay}</Text>
+                        <Text style={styles.cardValue}>{capitalize(timeOfDay)}</Text>
                     </View>
                 </LinearGradient>
 

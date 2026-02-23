@@ -1,16 +1,16 @@
 def detect_intent(text: str):
-    text = text.lower()
+    text = text.lower().strip()
 
     if any(x in text for x in ["hi", "hello", "hey"]):
         return "greeting"
     
-    if "moodsync" in text:
+    if "moodsync" in text or "how does" in text or "how do i use" in text:
         return "moodsync_explain"
     
-    if "suggest" in text or "activity" in text:
+    if any(x in text for x in ["suggest", "activity", "recommend"]):
         return "suggest_activity"
     
-    if any(x in text for x in ["help", "sad", "down", "anxious"]):
+    if any(x in text for x in ["help", "sad", "down", "anxious", "low mood", "bad mood"]):
         return "help_mood"
     
     return "fallback"

@@ -1,13 +1,28 @@
-from sqlalchemy import Column, String, Float, Integer
+from sqlalchemy import Column, Integer, String, Float, JSON, DateTime
+from sqlalchemy.sql import func
 from app.database import Base
 
 class Activity(Base):
     __tablename__ = "activities"
 
-    id = Column(String, primary_key=True, index=True)
-    name = Column(String)
-    description = Column(String)
-    distance = Column(Float)
+    id = Column(Integer, primary_key=True)
+    place_id = Column(String, unique=True, index=True)
+
+    title = Column(String)
+    subtitle = Column(String)
+
+    categories = Column(JSON)
+    category_names = Column(JSON)
+
+    latitude = Column(Float)
+    longitude = Column(Float)
+
+    rating = Column(Float)
+    price = Column(Integer)
+    popularity = Column(Float)
+
     mood = Column(String)
     weather = Column(String)
     score = Column(Float)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

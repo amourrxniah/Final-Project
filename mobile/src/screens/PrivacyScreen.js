@@ -1,9 +1,18 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity} from 'react-native';
+import { 
+    View, 
+    Text, 
+    StyleSheet, 
+    ScrollView, 
+    TouchableOpacity, 
+    Modal 
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';  
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Modal } from 'react-native';
+import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
+
+const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
 
 export default function PrivacyScreen({ navigation }) {
     const [showModal, setShowModal] = useState(false);
@@ -21,9 +30,68 @@ export default function PrivacyScreen({ navigation }) {
     const toggle = (key) =>
         setChecks((prev) => ({ ...prev, [key]: !prev[key] }));
 
+    //get or create anonymous user
+    const getUserId = async () => {
+        let userId = await AsyncStorage.getItem("user_id");
+
+        if (!userId) {
+            const deviceId = Crypto.randomUUID();
+
+            const res = await fetch(`${BACKEND_URL}/users/anonymous`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ device_id: deviceId })
+            });
+
+            const data = await res.json();
+            userId = String(data.id);
+
+            await AsyncStorage.setItem("user_id", userId);
+        }
+        return userId;
+    };
+
+    //check consent on load
+    useEffect(() => {
+        const checkConsent = async () => {
+            const cached = await AsyncStorage.getItem("userConsent");
+            if (cached === "true") {
+                navigation.replace("AuthChoice");
+                return;
+            }
+
+            try {
+                const userId = await getUserId();
+                const res = await fetch(
+                    `${BACKEND_URL}/consent/me?user_id=${userId}`
+                );
+
+                if (res.ok) {
+                    await AsyncStorage.setItem("userConsent", "true");
+                    navigation.navigate("AuthChoice");
+                }
+            } catch (err) {
+                console.log("Consent not found, showing screen");
+            }
+        };
+        checkConsent();
+    }, []);
+
+    //accept consent
     const handleAccept = async () => {
-        await AsyncStorage.setItem("userConsent", "true");
-        navigation.navigate("AuthChoice");
+        try {
+            const userId = await getUserId();
+
+            await fetch(`${BACKEND_URL}/consent/accept?user_id=${userId}`, {
+                method: "POST"
+            });
+
+            await AsyncStorage.setItem("userConsent", "true");
+            navigation.navigate("AuthChoice");
+        } catch (e) {
+            console.log("Failed to save consent", e)
+        }
+        
     };
 
     return (

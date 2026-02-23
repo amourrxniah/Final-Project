@@ -3,9 +3,9 @@ import { StyleSheet } from "react-native";
 export default StyleSheet.create({
     aiButton: {
         position: "absolute",
-        right: 24,
-        bottom: 190,
-        zIndex: 10
+        left: 0,
+        top: 0,
+        zIndex: 1000
     },
 
     aiCircle: {
@@ -29,7 +29,8 @@ export default StyleSheet.create({
         shadowColor: "#000",
         shadowOpacity: 0.15,
         shadowRadius: 10,
-        elevation: 12
+        elevation: 9999,
+        zIndex: 9999
     },
 
     chatHeader: {
@@ -72,10 +73,10 @@ export default StyleSheet.create({
 
     aiTail: {
         position: "absolute",
-        right: -5,
+        left: -6,
         bottom: 6,
-        width: 10,
-        height: 10,
+        width: 12,
+        height: 12,
         borderLeftWidth: 8,
         borderTopWidth: 8,
         borderLeftColor: "#cce5ff",
@@ -106,10 +107,10 @@ export default StyleSheet.create({
 
     userTail: {
         position: "absolute",        
-        left: -5,
-        bottom: 5,
-        width: 10,
-        height: 10,
+        right: -6,
+        bottom: 6,
+        width: 12,
+        height: 12,
         borderRightWidth: 8,
         borderTopWidth: 8,
         borderRightColor: "#ff4fa3",

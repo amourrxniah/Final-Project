@@ -4,45 +4,58 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Linking from "expo-linking";
 import { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from "axios";
 
 WebBrowser.maybeCompleteAuthSession();
 
+const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
+
 export default function AuthChoiceScreen({ navigation }) {
 
+    const redirectUri = Linking.createURL("auth");
+
     const [request, response, promptAsync] = Google.useAuthRequest({
-        expoClientId: "YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com",
-        webClientId: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
-        iosClientId: "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
-        androidClientId: "YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com",
+        expoClientId: "229013008515-gso30jimda36hmk3aiv9paasrthp7ia7.apps.googleusercontent.com",
+        iosClientId: "229013008515-7pis0oeo154i7vui552mpu6n3cs9f9f0.apps.googleusercontent.com",
+        androidClientId: "229013008515-5antgnlq4d55b2tcp2mdiia6qujpq1ke.apps.googleusercontent.com",
+        webClientId: "229013008515-v06bu88dvtlpqfnet908lv8ithspgbmd.apps.googleusercontent.com",        
+        redirectUri,
         scopes: ["profile", "email"],
     });
 
     useEffect(() => {
         if (response?.type === "success") {
-            const saveGoogleUser = async () => {
-                const user = {
-                    name: ""
-                };
-
-                await AsyncStorage.setItem("user", JSON.stringify(user));
-                await AsyncStorage.setItem("isLoggedIn", "true");
-
-                navigation.replace("Home");
-            }
-            
-            saveGoogleUser();
+            handleGoogleLogin(response.authentication?.accessToken);
         }
     }, [response]);
 
-    const handleLogin = async () => {
-        const storedUser = await AsyncStorage.getItem("user");
-        const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
+    const handleGoogleLogin = async (accessToken) => {
+        const res = await axios.post(`${BACKEND_URL}/auth/google`, {
+            access_token: accessToken
+        });
 
-        if (storedUser && isLoggedIn === "true") {
-            navigation.replace("Home");
-        }
+        await AsyncStorage.setItem("token", res.data.access_token);
+        navigation.replace("Home");
+    };
+
+    const handleAppleLogin = async () => {
+        const credential = await AppleAuthentication.signInAsync({
+            requestedScopes: [
+                AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                AppleAuthentication.AppleAuthenticationScope.FULL_NAME
+            ]
+        });
+
+        const res = await axios.post(`${BACKEND_URL}/auth/apple`, {
+            email: credential.email,
+            full_name: credential.fullName
+        });
+
+        await AsyncStorage.setItem("token", res.data.access_token);
+        navigation.replace("Home");
     };
 
     return (
@@ -71,7 +84,7 @@ export default function AuthChoiceScreen({ navigation }) {
                     <TouchableOpacity 
                         style={styles.googleButton}
                         disabled={!request}
-                        onPress={() => promptAsync({ useProxy: true })}
+                        onPress={() => promptAsync()}
                     >
                         <MaterialCommunityIcons 
                             name="gmail" 
@@ -83,26 +96,7 @@ export default function AuthChoiceScreen({ navigation }) {
                     {Platform.OS === "ios" && (
                         <TouchableOpacity
                             style={styles.appleButton}
-                            onPress={async () => {
-                                try {
-                                    const credential = await AppleAuthentication.signInAsync({
-                                        requestedScopes: [
-                                            AppleAuthentication.AppleAuthenticationScope.EMAIL,
-                                            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-                                        ],
-                                    });
-
-                                    const user = {
-                                        name: credential.fullName?.givenName ?? "Apple User",
-                                    };
-
-                                    await AsyncStorage.setItem("user", JSON.stringify(user));
-                                    await AsyncStorage.setItem("isLoggedIn", "true");
-
-                                    navigation.replace("Home");
-
-                                } catch (e) {}
-                            }}
+                            onPress={handleAppleLogin}
                         >
                             <MaterialCommunityIcons 
                                 name="apple" 
@@ -116,7 +110,7 @@ export default function AuthChoiceScreen({ navigation }) {
                     {/* LOGIN EXISTING */}
                     <TouchableOpacity
                         style={styles.loginButton}
-                        onPress={handleLogin}
+                        onPress={() => navigation.navigate("ManualLogin")}
                     >
                         <Text style={styles.loginText}>Log in to existing account</Text>
                     </TouchableOpacity>

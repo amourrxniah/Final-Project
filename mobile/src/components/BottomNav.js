@@ -1,7 +1,21 @@
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { forwardRef } from "react";
 
-export default function BottomNav({ navigation, active }) {
+const NavIcon = forwardRef(({ name, color, onPress }, ref) => {
+    return (
+        <TouchableOpacity 
+            ref={ref} 
+            style={styles.navIcon} 
+            onPress={onPress} 
+            activeOpacity={0.8}
+        >
+            <MaterialCommunityIcons name={name} size={45} color={color}/>
+        </TouchableOpacity>
+    );
+});
+
+export default function BottomNav({ navigation, active, favouriteRef }) {
     const iconColor = name =>
         active === name ? "#9b5de5" : "#aaa";
 
@@ -21,6 +35,7 @@ export default function BottomNav({ navigation, active }) {
                 <NavIcon 
                     name="bookmark-outline" 
                     color={iconColor("favourites")}
+                    ref={favouriteRef}
                 />
                 <NavIcon 
                     name="account-outline" 
@@ -35,13 +50,9 @@ export default function BottomNav({ navigation, active }) {
     );
 }
 
-function NavIcon ({ name, color, onPress }) {
-    return (
-        <TouchableOpacity style={styles.navIcon} onPress={onPress}>
-            <MaterialCommunityIcons name={name} size={45} color={color}/>
-        </TouchableOpacity>
-    );
-}
+
+
+export { NavIcon };
 
 const styles = StyleSheet.create({
     navWrapper: {
