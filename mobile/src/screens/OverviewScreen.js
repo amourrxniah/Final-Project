@@ -4,6 +4,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
+import { useRoute } from "@react-navigation/native";
 
 const capitalize = (str) => {
     if (!str) return "";
@@ -61,8 +62,13 @@ const getWeatherIcon = (condition) => {
     return "weather-partly-cloudy";
 };
 
-export default function OverviewScreen({ route, navigation }) {
-    const { mood, moodTime, timeOfDay, weather } = route.params;
+export default function OverviewScreen({ navigation }) {
+    const route = useRoute();
+    
+    const mood = route?.params?.mood ?? null;
+    const moodTime = route?.params?.moodTime ?? new Date().toISOString();
+    const timeOfDay = route?.params?.timeOfDay ?? "Evening";
+    const weather = route?.params?.weather ?? null;
 
     const { label, icon, color, bg } = moodConfig(mood);
     const weatherIcon = getWeatherIcon(weather?.condition);

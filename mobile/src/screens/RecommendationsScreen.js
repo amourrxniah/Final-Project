@@ -14,7 +14,8 @@ import * as Location from "expo-location";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
-
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import BottomNav from "../components/BottomNav";
 import SkeletonCard from "../components/SkeletonCard";
@@ -99,11 +100,11 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [sortOpen, setSortOpen] = useState(false);
   const [sortMode, setSortMode] = useState("relevance");
   const [favourites, setFavourites] = useState({});
-  
+
   const heartRefs = useRef({});
   const favouritesTargetRef = useRef(null);
 
-  const { animateToTarget, FlyingHeart, boomarkPulse, Sparkle } =
+  const { animateToTarget, FlyingHeart, bookmarkPulse } =
     useFavouriteAnimation();
 
   /* --------------- ANIMATION --------------- */
@@ -166,25 +167,52 @@ export default function RecommendationsScreen({ route, navigation }) {
 
   const [undoItem, setUndoItem] = useState(null);
 
-  const toggleFavourite = (item) => {
+  const toggleFavourite = async (item) => {
     const isAdding = !favourites[item.id];
 
     setFavourites((prev) => ({ ...prev, [item.id]: isAdding }));
 
-    heartRefs.current[item.id].measureInWindow((sx, sy, sw, sh) => {
-        favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
-            animateToTarget(
-                { x: sx + sw / 2 - 15, y: sy + sh / 2 - 15 },
-                { x: ex + ew / 2 - 15, y: ey + eh / 2 - 15 },
-            );
-        });
-    });
-
     if (isAdding) {
-        saveFavouriteToDB(item.id);
+      // animate heart to bookmark
+      heartRefs.current[item.id].measureInWindow((sx, sy, sw, sh) => {
+        favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
+          animateToTarget(
+            { x: sx + sw / 2 - 15, y: sy + sh / 2 - 15 },
+            { x: ex + ew / 2 - 15, y: ey + eh / 2 - 15 },
+          );
+        });
+      });
+
+      try {
+        const token = await AsyncStorage.getItem("token");
+
+        await axios.post(
+          `${BACKEND_URL}/favourites`,
+          { activity_id: item.id },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+
         setUndoItem(item);
+
+        //auto hude undo after 5 seconds
+        setTimeout(() => setUndoItem(null), 5000);
+      } catch (err) {
+        console.log("Favourite toggle failed", err);
+      }
     } else {
-        removeFavouriteFromDB(item.id);
+      await removeFavouriteFromDB(item.id);
+    }
+  };
+
+  const removeFavouriteFromDB = async (id) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      await axios.delete(`${BACKEND_URL}/favourites/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (err) {
+      console.log("Failed to remove favourite", err);
     }
   };
 
@@ -301,14 +329,29 @@ export default function RecommendationsScreen({ route, navigation }) {
                   <TouchableOpacity
                     style={styles.card}
                     activeOpacity={0.9}
-                    onPress={async () =>{
-                      const token = await AsyncStorage.getItem("token");
-                      await axios.post(
-                        `${BACKEND_URL}/activity/log`,
-                        { activity_id: item.id },
-                        { headers: { Authorization: `Bearer ${token}` } },
-                      );
-                      navigation.navigate("ActivityDetails", { activity: item, allActivities: activities, mood, weather: weather?.condition })
+                    onPress={async () => {
+                      try {
+                        const token = await AsyncStorage.getItem("token");
+                        
+                        await axios.post(
+                          `${BACKEND_URL}/mood/activity/view`,
+                          { id: item.id,
+                            title: item.title,
+                           },
+                          { headers: { Authorization: `Bearer ${token}` } },
+                        );
+                      } catch (err) {
+                        console.log("Navigation error", err);
+                      }
+
+                      //always navigate
+                      navigation.navigate("ActivityDetails", {
+                          activity: item,
+                          allActivities: sortedActivities,
+                          mood,
+                          weather: weather?.condition,
+                          rank: rank,
+                      });
                     }}
                   >
                     {/* RANK */}
@@ -320,7 +363,10 @@ export default function RecommendationsScreen({ route, navigation }) {
                     <TouchableOpacity
                       ref={(ref) => (heartRefs.current[item.id] = ref)}
                       style={styles.heart}
-                      onPress={() => toggleFavourite(item.id)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        toggleFavourite(item)
+                      }}
                     >
                       <MaterialCommunityIcons
                         name={favourites[item.id] ? "heart" : "heart-outline"}
@@ -436,16 +482,6 @@ export default function RecommendationsScreen({ route, navigation }) {
                 )}
               </View>
             )}
-
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.flyingHeart,
-                
-              ]}
-            >
-              <MaterialCommunityIcons name="heart" size={28} color="#ff4fa3" />
-            </Animated.View>
           </ScrollView>
         )}
 
@@ -455,10 +491,28 @@ export default function RecommendationsScreen({ route, navigation }) {
 
       <FlyingHeart />
 
+      {undoItem && (
+        <View style={styles.undoContainer}>
+          <Text style={styles.undoText}>
+            Added "{undoItem.title}" to favourites
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setFavourites((prev) => ({ ...prev, [undoItem.id]: false }));
+              removeFavouriteFromDB(undoItem.id);
+              setUndoItem(null);
+            }}
+          >
+            <Text style={styles.undoBtn}>Undo</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <BottomNav
         navigation={navigation}
         active="mood"
         favouriteRef={favouritesTargetRef}
+        bookmarkPulse={bookmarkPulse}
       />
     </View>
   );
@@ -583,6 +637,30 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     zIndex: 999,
+  },
+
+  undoContainer: {
+    position: "absolute",
+    bottom: 120,
+    left: 20,
+    right: 20,
+    backgroundColor: "#333",
+    padding: 16,
+    borderRadius: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    zIndex: 9999
+  },
+
+  undoText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+
+  undoBtn: {
+    color: "#fff4fa3",
+    fontWeight: "800"
   },
 
   card: {

@@ -9,6 +9,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRoute } from "@react-navigation/native";
 
 const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
 
@@ -18,6 +19,8 @@ const capitalize = (str) => {
 };
 
 export default function DetectedContextScreen({ navigation }) {
+    const route = useRoute();
+
     const [mood, setMood] = useState(null);
     const [moodTime, setMoodTime] = useState(null);
     const [timeOfDay, setTimeOfDay] = useState("");
@@ -26,17 +29,12 @@ export default function DetectedContextScreen({ navigation }) {
 
 
     useEffect(() => {
-        loadMood();
+        setMood(route?.params?.mood ?? null);
+        setMoodTime(route?.params?.moodTime ?? new Date().toISOString());
+        
         detectTime();
         detectContext();
     }, []);
-
-    const loadMood = async () => {
-        const storedMood = await AsyncStorage.getItem("currentMood");
-        setMood(storedMood);
-
-        setMoodTime(new Date().toISOString());
-    };
 
     /* TIME OF DAY */
     const detectTime = () => {
@@ -233,8 +231,8 @@ export default function DetectedContextScreen({ navigation }) {
             {/* CONTINUE BUTTON */}
             <TouchableOpacity
                 onPress={() => navigation.navigate("Overview", {
-                    mood,
-                    moodTime,
+                    mood: mood,
+                    moodTime: moodTime,
                     timeOfDay,
                     weather: weather
                         ? {

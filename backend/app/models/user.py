@@ -6,10 +6,11 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
-    username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=True)
+    email = Column(String, unique=True, index=True, nullable=True)
     password_hash = Column(String)
     provider = Column(String, default="manual") # google | apple | manual | anonymous
+    device_id = Column(String, unique=True, nullable=True)
     date_of_birth = Column(Date)
     is_verified = Column(Boolean, default=False)
 

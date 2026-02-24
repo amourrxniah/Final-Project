@@ -15,6 +15,8 @@ import AIAssistant from "../components/AIAssistant/AIAssistant";
 import BottomNav from "../components/BottomNav";
 import axios from "axios";
 
+const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
+
 /* -------------------- CONSTANTS --------------------*/
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
@@ -74,6 +76,7 @@ export default function MoodInputScreen({ navigation }) {
 
     try {
       const token = await AsyncStorage.getItem("token");
+      console.log("TOKEn:", token);
 
       await axios.post(
         `${BACKEND_URL}/mood/log`,
@@ -81,7 +84,10 @@ export default function MoodInputScreen({ navigation }) {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      navigation.navigate("DetectedContext");
+      navigation.navigate("DetectedContext", {
+        mood: selected,
+        moodTime: new Date().toISOString(),
+      });
     } catch (err) {
       console.log("Mood save failed", err);
     }

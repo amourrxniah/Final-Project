@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { View, TouchableOpacity, StyleSheet, Animated } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { forwardRef } from "react";
 
@@ -15,7 +15,14 @@ const NavIcon = forwardRef(({ name, color, onPress }, ref) => {
     );
 });
 
-export default function BottomNav({ navigation, active, favouriteRef }) {
+export default function BottomNav({
+    navigation, 
+    active, 
+    favouriteRef,
+    bookmarkPulse
+}) {
+    const safePulse =  bookmarkPulse ?? new Animated.Value(1);
+    
     const iconColor = name =>
         active === name ? "#9b5de5" : "#aaa";
 
@@ -32,18 +39,22 @@ export default function BottomNav({ navigation, active, favouriteRef }) {
                     color={iconColor("mood")}
                     onPress={() => navigation.navigate("MoodInput")} 
                 />
-                <NavIcon 
-                    name="bookmark-outline" 
-                    color={iconColor("favourites")}
-                    ref={favouriteRef}
-                />
+                <Animated.View 
+                    style={{ transform: [{ scale: safePulse }] }}>
+                    <NavIcon 
+                        name="bookmark-outline" 
+                        color={iconColor("favourites")}
+                        ref={favouriteRef}
+                    />
+                </Animated.View>
+                
                 <NavIcon 
                     name="account-outline" 
                     color={iconColor("profile")}
                 />
                 <NavIcon 
                     name="cog-outline" 
-                    color={iconColor("Ssettings")}
+                    color={iconColor("settings")}
                 />
             </View>       
         </View>

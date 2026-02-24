@@ -1,32 +1,34 @@
 import { useRef, useState } from "react";
-import { Animated, Easing } from "react-native";
+import { View, Animated, Easing } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export function useFavouriteAnimation() {
   //flying heart position + opacity
-  const flyingPos = useRef(new Animated.ValueXY()).current;
+  const flyingX = useRef(new Animated.Value(0)).current;
+  const flyingY = useRef(new Animated.Value(0)).current;
   const flyingOpacity = useRef(new Animated.Value(0)).current;
 
   //bookmark pulse
-  const boomarkPulse = useRef(new Animated.Value(1)).current;
+  const bookmarkPulse = useRef(new Animated.Value(1)).current;
 
   const [showSparkle, setShowSparkle] = useState(false);
 
   //animate heart from card -> bookmark
   const animateToTarget = (start, end) => {
-    flyingPos.setValue(start);
+    flyingX.setValue(start.x);
+    flyingY.setValue(start.y);
     flyingOpacity.setValue(1);
 
     Animated.sequence([
       //lift up + curve
       Animated.parallel([
-        Animated.timing(flyingPos.x, {
+        Animated.timing(flyingX, {
           toValue: (start.x + end.x) / 2,
           duration: 250,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
-        Animated.timing(flyingPos.y, {
+        Animated.timing(flyingY, {
           toValue: start.y - 120,
           duration: 250,
           easing: Easing.out(Easing.quad),
@@ -36,13 +38,13 @@ export function useFavouriteAnimation() {
 
       //fly into bookmark + fade
       Animated.parallel([
-        Animated.timing(flyingPos.x, {
+        Animated.timing(flyingX, {
           toValue: end.x,
           duration: 300,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.timing(flyingPos.y, {
+        Animated.timing(flyingY, {
           toValue: end.y,
           duration: 300,
           easing: Easing.in(Easing.cubic),
@@ -63,12 +65,12 @@ export function useFavouriteAnimation() {
   //pulse bookmark icon
   const pulseBookmark = () => {
     Animated.sequence([
-      Animated.timing(boomarkPulse, {
+      Animated.timing(bookmarkPulse, {
         toValue: 1.3,
         duration: 120,
         useNativeDriver: true,
       }),
-      Animated.timing(boomarkPulse, {
+      Animated.timing(bookmarkPulse, {
         toValue: 1,
         duration: 120,
         useNativeDriver: true,
@@ -89,8 +91,8 @@ export function useFavouriteAnimation() {
         zIndex: 9999,
         opacity: flyingOpacity,
         transform: [
-          { translateX: flyingPos.x },
-          { translateY: flyingPos.y },
+          { translateX: flyingX },
+          { translateY: flyingY },
           {
             scale: flyingOpacity.interpolate({
               inputRange: [0, 1],
@@ -114,7 +116,7 @@ export function useFavouriteAnimation() {
   return {
     animateToTarget,
     FlyingHeart,
-    boomarkPulse,
+    bookmarkPulse,
     Sparkle,
   };
 }

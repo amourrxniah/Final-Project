@@ -30,18 +30,36 @@ export default function PrivacyScreen({ navigation }) {
     const toggle = (key) =>
         setChecks((prev) => ({ ...prev, [key]: !prev[key] }));
 
+    //get or create device id
+    const getDeviceId = async () => {
+        let deviceId = await AsyncStorage.getItem("device_id");
+
+        if (!deviceId) {
+            deviceId = Crypto.randomUUID();
+            await AsyncStorage.setItem("device_id", deviceId);
+        }
+
+        return deviceId;
+    };
+
     //get or create anonymous user
     const getUserId = async () => {
         let userId = await AsyncStorage.getItem("user_id");
 
         if (!userId) {
-            const deviceId = Crypto.randomUUID();
+            const deviceId = await getDeviceId();
 
             const res = await fetch(`${BACKEND_URL}/users/anonymous`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ device_id: deviceId })
             });
+
+            if (!res.ok) {
+                const test = await res.text();
+                console.log("User creation failed", test);
+                throw new Error("Failed to create anonymous user");
+            }
 
             const data = await res.json();
             userId = String(data.id);
@@ -55,6 +73,7 @@ export default function PrivacyScreen({ navigation }) {
     useEffect(() => {
         const checkConsent = async () => {
             const cached = await AsyncStorage.getItem("userConsent");
+            
             if (cached === "true") {
                 navigation.replace("AuthChoice");
                 return;
@@ -62,16 +81,24 @@ export default function PrivacyScreen({ navigation }) {
 
             try {
                 const userId = await getUserId();
+                
                 const res = await fetch(
                     `${BACKEND_URL}/consent/me?user_id=${userId}`
                 );
 
-                if (res.ok) {
+                if (!res.ok) {
+                    console.log("No consent yet");
+                    return;
+                }
+
+                const data = await res.json();
+
+                if (data.accepted) {
                     await AsyncStorage.setItem("userConsent", "true");
                     navigation.navigate("AuthChoice");
                 }
             } catch (err) {
-                console.log("Consent not found, showing screen");
+                console.log("Consent check error:", err);
             }
         };
         checkConsent();
@@ -82,8 +109,15 @@ export default function PrivacyScreen({ navigation }) {
         try {
             const userId = await getUserId();
 
-            await fetch(`${BACKEND_URL}/consent/accept?user_id=${userId}`, {
-                method: "POST"
+            const deviceId = await getDeviceId();
+
+            await fetch(`${BACKEND_URL}/consent/accept`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_id: userId, 
+                    device_id: deviceId 
+                })
             });
 
             await AsyncStorage.setItem("userConsent", "true");

@@ -12,6 +12,7 @@ import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFavouriteAnimation } from "../components/useFavouriteAnimation";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import BottomNav from "../components/BottomNav";
@@ -45,8 +46,8 @@ export default function ActivityDetailsScreen({ route, navigation}) {
 
     const heartRef = useRef(null);
     const favouritesTargetRef = useRef(null);
-    const flyingHeart = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-    const flyingOpacity = useRef(new Animated.Value(0)).current;
+    const { animateToTarget, FlyingHeart, bookmarkPulse } = 
+    useFavouriteAnimation();
 
     const toggleFavourite = () => {
         setIsFav(prev => !prev);
@@ -55,59 +56,12 @@ export default function ActivityDetailsScreen({ route, navigation}) {
 
         heartRef.current.measureInWindow((sx, sy, sw, sh) => {
             favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
-                
-                //start at header heart
-                const startX = sx + sw / 2;
-                const startY = sy + sh / 2;
-    
-                //start at favourites icon
-                const endX = ex + ew / 2;
-                const endY = ey + eh / 2;
-    
-                flyingHeart.setValue({ x: startX, y: startY });
-                flyingOpacity.setValue(1);
-    
-                //midpoint to create curve
-                const midX = (startX + endX) / 2;
-                const midY = startY - 140;
-    
-                Animated.sequence([
-                    Animated.parallel([
-                        Animated.timing(flyingHeart.x, {
-                            toValue: midX,
-                            duration: 300,
-                            easing: Easing.out(Easing.cubic),
-                            useNativeDriver: true,
-                        }),
-                        Animated.timing(flyingHeart.y, {
-                            toValue: midY,
-                            duration: 300,
-                            easing: Easing.out(Easing.cubic),
-                            useNativeDriver: true,
-                        }),
-                    ]),
-                    Animated.parallel([
-                        Animated.timing(flyingHeart.x, {
-                            toValue: endX,
-                            duration: 400,
-                            easing: Easing.in(Easing.cubic),
-                            useNativeDriver: true,
-                        }),
-                        Animated.timing(flyingHeart.y, {
-                            toValue: endY,
-                            duration: 400,
-                            easing: Easing.in(Easing.cubic),
-                            useNativeDriver: true,
-                        }),
-                        Animated.timing(flyingOpacity, {
-                            toValue: 0,
-                            duration: 400,
-                            useNativeDriver: true,
-                        }),
-                    ]),
-                ]).start();
-            })
-        })
+                animateToTarget(
+                    { x: sx + sw / 2 - 15, y: sy + sh / 2 - 15 },
+                    { x: ex + ew / 2 - 15, y: ey + eh / 2 - 15 }
+                );
+            });
+        });
     };
 
     /* ---------- RATING ---------- */
@@ -125,7 +79,7 @@ export default function ActivityDetailsScreen({ route, navigation}) {
 
     const setStars = async (value) => {
         setRating(value);
-        await AsyncStorage.setItem(`rating+${activity.id}`, String(value));
+        await AsyncStorage.setItem(`rating_${activity.id}`, String(value));
     };
 
     return (
@@ -305,35 +259,16 @@ export default function ActivityDetailsScreen({ route, navigation}) {
                     </View>
                 </ScrollView>
             </View>
-
-            {/* HEART */}
-            <Animated.View
-                pointerEvents="none"
-                style={[
-                    styles.flyingHeart,
-                    {
-                        opacity: flyingOpacity,
-                        transform: [
-                            { translateX: flyingHeart.x },
-                            { translateY: flyingHeart.y },
-                            {
-                                scale: flyingOpacity.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0.5, 1],
-                                }),
-                            },
-                        ],
-                    },
-                ]}
-            >
-                <MaterialCommunityIcons name="heart" size={34} color="#ff4fa3" />
-            </Animated.View>
             
             <AIAssistant />
+
+            <FlyingHeart />
+
             <BottomNav 
                 navigation={navigation} 
                 active="mood" 
                 favouriteRef={favouritesTargetRef}
+                bookmarkPulse={bookmarkPulse}
             />
         </View>
     );

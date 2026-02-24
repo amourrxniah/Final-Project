@@ -1,12 +1,14 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Animated } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Rect, Text as SvgText, Path, Circle } from "react-native-svg";
 import BottomNav from "../components/BottomNav";
 import axios from "axios";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 
 const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
 
@@ -34,6 +36,80 @@ export default function HomeScreen({ navigation }) {
         };
         loadUser();
     }, []);
+
+    const [stats, setStats] = useState({
+        total_syncs: 0,
+        current_streak: 0,
+        most_common_mood: null
+    });
+
+    const fetchStats = async () => {
+        try {
+            const token = await AsyncStorage.getItem("token");
+
+            const res = await axios.get(
+                `${BACKEND_URL}/mood/stats`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+            setStats(res.data);
+        } catch (err) {
+            console.log("Failed to fetch stats", err.response?.data || err.message);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchStats();
+        }, [])
+    );
+    
+    const [trend, setTrend] = useState([]);
+    const [recentActivity, setRecentActivity] = useState([]);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const loadData = async () => {
+                try {
+                    const token = await AsyncStorage.getItem("token");
+                    if (!token) return;
+
+                    const headers = {
+                        Authorization: `Bearer ${token}`
+                    };
+
+                    const [statsRes, trendRes, activityRes] = await Promise.all([
+                        axios.get(`${BACKEND_URL}/mood/stats`, { headers }),
+                        axios.get(`${BACKEND_URL}/mood/trend`, { headers }),
+                        axios.get(`${BACKEND_URL}/mood/activity/recent`, { headers })
+                    ]);
+
+                    setStats(statsRes.data);
+                    setTrend(trendRes.data);
+                    setRecentActivity(activityRes.data);
+
+                } catch (err) {
+                    console.log("Failed to load data", err.response?.data || err.message);
+                }
+            };
+            loadData();
+        }, [])
+    );
+
+    const timeAgo = (timestamp) => {
+        const now = new Date();
+        const past = new Date(timestamp);
+        const diff = Math.floor((now - past) / 1000);
+
+        if (diff < 60) return "Just now";
+        if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+        return `${Math.floor(diff / 604800)} weeks ago`;
+    }
 
     return (
         <View style={styles.container}>
@@ -74,9 +150,9 @@ export default function HomeScreen({ navigation }) {
                 
                 {/* STATS */}
                 <View style={styles.statsRow}>
-                    <StatCard icon="pulse" label="Total Syncs" color="#9b5de5" />
-                    <StatCard icon="trending-up" label="Day Streak" color="#2ec4b6" />
-                    <StatCard icon="battery-low" label="Most Common" color="#4dabf7" />
+                    <StatCard icon="pulse" label="Total Syncs" color="#9b5de5" value={stats.total_syncs} />
+                    <StatCard icon="trending-up" label="Day Streak" color="#2ec4b6" value={stats.current_streak} />
+                    <StatCard icon="battery-low" label="Most Common" color="#4dabf7" value={stats.most_common_mood ?? "-"} />
                 </View>
 
                 {/* 7 DAY MOOD TREND */}
@@ -90,13 +166,12 @@ export default function HomeScreen({ navigation }) {
                         <Text style={styles.cardTitle}>7 Day Mood Trend</Text>
                     </View>
 
-                    <MoodFrequencyGraph
-                        data={[
+                    <MoodFrequencyGraph data={trend.length ? trend : [
                             { day: "Mon", value: 0},
-                            { day: "Tue", value: 1},
+                            { day: "Tue", value: 0},
                             { day: "Wed", value: 0},
-                            { day: "Thu", value: 2},
-                            { day: "Fri", value: 1},
+                            { day: "Thu", value: 0},
+                            { day: "Fri", value: 0},
                             { day: "Sat", value: 0},
                             { day: "Sun", value: 0}
                         ]}
@@ -121,9 +196,17 @@ export default function HomeScreen({ navigation }) {
                         <Text style={styles.cardTitle}>Recent Activity</Text>
                     </View>
 
-                    <ActivityRow title="Low Energy" sub="9:41 PM" tag="Evening" tagStyle={styles.tagNeutral} topBorder />
-                    <ActivityRow title="Coffee & Co" sub="2 days ago" tag="Enjoyed" tagStyle={styles.tagSuccess} />
-                    <ActivityRow title="Cinema - Latest Releases" sub="1 week ago" tag="Skipped" tagStyle={styles.tagDanger} />
+                    {recentActivity.map((item, index) => (
+                        <ActivityRow 
+                            key={index}
+                            title={item.title}
+                            sub={timeAgo(item.timestamp)}
+                            tag="Viewed"
+                            tagStyle={styles.tagNeutral}
+                            topBorder={index !== 0}
+                        />
+                    ))}
+
                 </View>
                 
                 {/* INSIGHTS */}

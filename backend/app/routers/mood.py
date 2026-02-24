@@ -1,18 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
+from pydantic import BaseModel
+from collections import Counter
 
 from app.database import get_db
-from app.database import  User
 from app.models.mood_log import MoodLog
 from app.models.activity_log import ActivityLog
 from app.services.security import get_current_user
 
 router = APIRouter(prefix="/mood", tags=["mood"])
 
+class MoodRequest(BaseModel):
+    mood: str
+
 @router.post("/log")
 def log_mood(
-    mood: str, 
+    data: MoodRequest,
     db: Session = Depends(get_db), 
     user=Depends(get_current_user)
 ):
@@ -20,7 +24,7 @@ def log_mood(
 
     entry = MoodLog(
         user_id=user.id, 
-        mood=mood
+        mood=data.mood
     )
 
     db.add(entry)
@@ -46,8 +50,8 @@ def log_mood(
 
     return {"Success": True}
 
-@router.post("/stats")
-def log_mood(
+@router.get("/stats")
+def get_stats(
     db: Session = Depends(get_db), 
     user=Depends(get_current_user)
 ):
@@ -57,13 +61,54 @@ def log_mood(
 
     #most common mood
     moods = [l.mood for l in logs]
-    most_common = max(set(moods), key=moods.count) if moods else None
+    
+    most_common = None
+    if moods:
+        most_common = Counter(moods).most_common(1)[0][0]
 
     return {
         "total_syncs": user.total_syncs,
         "current_streak": user.current_streak,
         "most_common_mood": most_common
     }
+
+@router.get("/trend")
+def get_7_day_trend(
+    db: Session = Depends(get_db), 
+    user=Depends(get_current_user)
+):
+    today = date.today()
+    seven_days_ago = today - timedelta(days=6)
+
+    logs = db.query(MoodLog).filter(
+        MoodLog.user_id == user.id,
+        MoodLog.timestamp >= seven_days_ago
+    ).all()
+
+    mood_map = {
+        "low": 0,
+        "neutral": 1,
+        "high": 2
+    }
+
+    trend = []
+
+    for i in range(7):
+        day = seven_days_ago + timedelta(days=i)
+
+        day_log = next(
+            (l for l in logs if l.timestamp.date() == day), 
+            None
+        )
+
+        value = mood_map.get(day_log.mood, 0) if day_log else 0
+
+        trend.append({
+            "day": day.strftime("%a"),
+            "value": value
+        })
+
+    return trend
 
 @router.post("/activity/view")
 def log_activity_view(
@@ -74,7 +119,7 @@ def log_activity_view(
     entry = ActivityLog(
         user_id=user.id,
         activity_id=data.get("id"),
-        title=data["title"]
+        title=data.get("title", "Unknown")
     )
 
     db.add(entry)
