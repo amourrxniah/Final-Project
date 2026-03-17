@@ -10,12 +10,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useState } from 'react';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-
-const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
+import { loginManual } from "../components/api";
 
 export default function ManualLoginScreen({ navigation }) {
+    
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -32,23 +30,9 @@ export default function ManualLoginScreen({ navigation }) {
         try {
             setLoading(true);
 
-            const res = await axios.post(`${BACKEND_URL}/auth/login`, {
-                identifier: identifier.toLowerCase(),
-                password
-            });
-
             //save token
-            await AsyncStorage.setItem("token", res.data.access_token);
+            await loginManual(identifier, password);
             
-            //fetch user
-            const me = await axios.get(`${BACKEND_URL}/auth/me`, {
-                headers: {
-                    Authorization: `Bearer ${res.data.access_token}`
-                }
-            });
-
-            await AsyncStorage.setItem("user", JSON.stringify(me.data));
-        
             navigation.replace("Home");
 
         } catch (error) {
@@ -165,7 +149,7 @@ export default function ManualLoginScreen({ navigation }) {
 
                     {/* FORGOT PASSWORD */}
                     <TouchableOpacity
-                        onPress={() => navigation.navigate("")}
+                        onPress={() => navigation.navigate("ForgotPassword")}
                         style={styles.forgotWrapper}
                     >
                         <Text style={styles.forgotText}>Forgot password?</Text>
@@ -196,19 +180,6 @@ export default function ManualLoginScreen({ navigation }) {
         </View>
     )
 
-}
-
-function Rule({ text, valid }){
-    return (
-        <View style={styles.ruleRow}>
-            <MaterialCommunityIcons
-                name={valid ? "check-circle": "close-circle"}
-                color={valid ? "green" : "ccc"}
-                size={18}
-            />
-            <Text style={styles.ruleText}>{text}</Text>
-        </View>
-    );
 }
 
 const styles = StyleSheet.create({
