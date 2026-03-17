@@ -4,6 +4,7 @@ from app.database import engine, Base
 
 from app.models.user import User
 from app.models.consent import UserConsent
+from app.models.feedback import Feedback
 
 from app.routers.chat import router as chat_router
 from app.routers.users import router as users_router
@@ -13,7 +14,8 @@ from app.routers.favourites import router as favourites_router
 from app.routers.consent import router as consent_router
 from app.routers.auth import router as auth_router
 from app.routers.mood import router as mood_router
-
+from app.routers.activities import router as activities_router
+from app.routers.feedback import router as feedback_router
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -37,6 +39,8 @@ app.include_router(favourites_router)
 app.include_router(consent_router)
 app.include_router(auth_router)
 app.include_router(mood_router)
+app.include_router(activities_router)
+app.include_router(feedback_router)
 
 @app.get("/")
 def health():

@@ -22,7 +22,7 @@ def get_places(lat, lon, limit=30):
     }
 
     try:
-        res = requests.get(BASE_URL, params=params, timeout=0.5)
+        res = requests.get(BASE_URL, params=params, timeout=3)
         res.raise_for_status()
     except Exception as e:
         print("Geoapify error:", e)

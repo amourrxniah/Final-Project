@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.user import User
 from app.models.favourite import Favourite
@@ -16,7 +17,11 @@ def create_favourite(
     current_user: User = Depends(get_current_user)
 ):
     # Check if the activity exists
-    activity = db.query(Activity).filter(Activity.id == fav.activity_id).first()
+    activity = db.query(Activity).filter(
+        Activity.id == fav.activity_id
+    ).first()
+    
+    
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
 
@@ -25,18 +30,23 @@ def create_favourite(
         Favourite.user_id == current_user.id,
         Favourite.activity_id == fav.activity_id
     ).first()
+    
     if existing:
         return existing
 
     # Create new favourite
-    favourite = Favourite(user_id=current_user.id, activity_id=fav.activity_id)
+    favourite = Favourite(
+        user_id=current_user.id, 
+        activity_id=fav.activity_id
+    )
     
     db.add(favourite)
     db.commit()
     db.refresh(favourite)
+    
     return favourite
 
-@router.delete("/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{activity_id}")
 def remove_favourite(
     activity_id: int,
     db: Session = Depends(get_db),
@@ -52,4 +62,20 @@ def remove_favourite(
 
     db.delete(favourite)
     db.commit()
-    return
+
+    return {"message": "Removed"}
+
+@router.get("/{activity_id}")
+def check_favourite(
+    activity_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    favourite = db.query(Favourite).filter(
+        Favourite.user_id == current_user.id,
+        Favourite.activity_id == activity_id
+    ).first()
+
+    return {
+        "is_favourite": favourite is not None
+    }

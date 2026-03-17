@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, JSON, DateTime
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 class Activity(Base):
@@ -26,3 +27,9 @@ class Activity(Base):
     score = Column(Float)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    favourited_by = relationship(
+        "Favourite",
+        back_populates="activity",
+        cascade="all, delete"
+    )

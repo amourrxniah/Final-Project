@@ -9,10 +9,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';  
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Crypto from 'expo-crypto';
-
-const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
+import { checkConsent, acceptConsent } from '../components/api';
 
 export default function PrivacyScreen({ navigation }) {
     const [showModal, setShowModal] = useState(false);
@@ -30,102 +27,25 @@ export default function PrivacyScreen({ navigation }) {
     const toggle = (key) =>
         setChecks((prev) => ({ ...prev, [key]: !prev[key] }));
 
-    //get or create device id
-    const getDeviceId = async () => {
-        let deviceId = await AsyncStorage.getItem("device_id");
-
-        if (!deviceId) {
-            deviceId = Crypto.randomUUID();
-            await AsyncStorage.setItem("device_id", deviceId);
-        }
-
-        return deviceId;
-    };
-
-    //get or create anonymous user
-    const getUserId = async () => {
-        let userId = await AsyncStorage.getItem("user_id");
-
-        if (!userId) {
-            const deviceId = await getDeviceId();
-
-            const res = await fetch(`${BACKEND_URL}/users/anonymous`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ device_id: deviceId })
-            });
-
-            if (!res.ok) {
-                const test = await res.text();
-                console.log("User creation failed", test);
-                throw new Error("Failed to create anonymous user");
-            }
-
-            const data = await res.json();
-            userId = String(data.id);
-
-            await AsyncStorage.setItem("user_id", userId);
-        }
-        return userId;
-    };
-
     //check consent on load
     useEffect(() => {
-        const checkConsent = async () => {
-            const cached = await AsyncStorage.getItem("userConsent");
-            
-            if (cached === "true") {
+        const init = async () => {
+            const consent = await checkConsent();
+
+            if (consent) {
                 navigation.replace("AuthChoice");
-                return;
-            }
-
-            try {
-                const userId = await getUserId();
-                
-                const res = await fetch(
-                    `${BACKEND_URL}/consent/me?user_id=${userId}`
-                );
-
-                if (!res.ok) {
-                    console.log("No consent yet");
-                    return;
-                }
-
-                const data = await res.json();
-
-                if (data.accepted) {
-                    await AsyncStorage.setItem("userConsent", "true");
-                    navigation.navigate("AuthChoice");
-                }
-            } catch (err) {
-                console.log("Consent check error:", err);
             }
         };
-        checkConsent();
+        init();
     }, []);
 
-    //accept consent
     const handleAccept = async () => {
         try {
-            const userId = await getUserId();
-
-            const deviceId = await getDeviceId();
-
-            await fetch(`${BACKEND_URL}/consent/accept`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    user_id: userId, 
-                    device_id: deviceId 
-                })
-            });
-
-            await AsyncStorage.setItem("userConsent", "true");
+            await acceptConsent();
             navigation.navigate("AuthChoice");
         } catch (e) {
-            console.log("Failed to save consent", e)
+            console.log("Failed to save consent", e);
         }
-        
     };
 
     return (

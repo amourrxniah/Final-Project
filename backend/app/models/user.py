@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Date, Boolean
 from app.database import Base
+from sqlalchemy.orm import relationship
 
 class User(Base):
     __tablename__ = "users"
@@ -17,3 +18,9 @@ class User(Base):
     total_syncs = Column(Integer, default=0)
     current_streak = Column(Integer, default=0)
     last_logged_date = Column(Date, nullable=True)
+
+    favourites = relationship(
+        "Favourite",
+        back_populates="user",
+        cascade="all, delete"
+    )

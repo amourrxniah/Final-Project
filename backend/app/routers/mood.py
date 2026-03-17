@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
 from pydantic import BaseModel
 from collections import Counter
 
@@ -73,42 +73,88 @@ def get_stats(
     }
 
 @router.get("/trend")
-def get_7_day_trend(
+def get_trend(
+    mode: str,
     db: Session = Depends(get_db), 
     user=Depends(get_current_user)
 ):
-    today = date.today()
-    seven_days_ago = today - timedelta(days=6)
+    now = datetime.now(timezone.utc)
 
-    logs = db.query(MoodLog).filter(
-        MoodLog.user_id == user.id,
-        MoodLog.timestamp >= seven_days_ago
-    ).all()
+    # --- DEFAULT RANGES ---
+    if mode == "live":
+        start = now - timedelta(hours=24)
+        bucket_minutes = 60
+    
+    elif mode == "yesterday":
+        start = now - timedelta(days=1)
+        bucket_minutes = 120
+
+    elif mode == "week":
+        start = now - timedelta(days=7)
+        bucket_minutes = 720
+    
+    elif mode == "month":
+        start = now - timedelta(days=30)
+        bucket_minutes = 1440
+    
+    else:
+        start = now - timedelta(days=7)
+        bucket_minutes = 720
+
+    logs = (
+        db.query(MoodLog)
+        .filter(MoodLog.user_id == user.id)
+        .filter(MoodLog.timestamp >= start)
+        .order_by(MoodLog.timestamp)
+        .all()
+    )
 
     mood_map = {
         "low": 0,
         "neutral": 1,
-        "high": 2
+        "high": 2,
     }
 
-    trend = []
+    buckets = {}
 
-    for i in range(7):
-        day = seven_days_ago + timedelta(days=i)
+    for log in logs:
+        delta = log.timestamp - start
+        bucket = int(delta.total_seconds() / (bucket_minutes * 60))
 
-        day_log = next(
-            (l for l in logs if l.timestamp.date() == day), 
-            None
-        )
+        value = mood_map.get(log.mood, 1)
 
-        value = mood_map.get(day_log.mood, 0) if day_log else 0
+        if bucket not in buckets:
+            buckets[bucket] = []
 
-        trend.append({
-            "day": day.strftime("%a"),
-            "value": value
+        buckets[bucket].append(value)
+    
+    max_bucket = int((now - start).total_seconds() / (bucket_minutes * 60))
+
+    result = []
+
+    for i in range(max_bucket + 1):
+
+        if i in buckets:
+            avg = round(sum(buckets[i]) / len(buckets[i]))
+            has_data = True
+        else:
+            avg = 1
+            has_data = False
+
+        time_point = start + timedelta(minutes=i * bucket_minutes)
+
+        if mode in ["live", "yesterday"]:
+            label = time_point.strftime("%H:%M")
+        else:
+            label = time_point.strftime("%d %b")
+            
+        result.append({
+            "value": avg,
+            "time": label,
+            "has_data": has_data 
         })
 
-    return trend
+    return result
 
 @router.post("/activity/view")
 def log_activity_view(
@@ -116,14 +162,19 @@ def log_activity_view(
     db: Session= Depends(get_db), 
     user=Depends(get_current_user)
 ):
-    entry = ActivityLog(
-        user_id=user.id,
-        activity_id=data.get("id"),
-        title=data.get("title", "Unknown")
-    )
+    existing = db.query(ActivityLog).filter(
+        ActivityLog.user_id == user.id,
+        ActivityLog.activity_id == data.get("id")
+    ).first()
 
-    db.add(entry)
-    db.commit()
+    if not existing:
+        entry = ActivityLog(
+            user_id=user.id,
+            activity_id=data.get("id"),
+            title=data.get("title", "Unknown")
+        )
+        db.add(entry)
+        db.commit()
 
     return {"Success": True}
 
@@ -132,11 +183,31 @@ def recent_activity(
     db: Session = Depends(get_db), 
     user=Depends(get_current_user)
 ):
-    activities = (
-        db.query(ActivityLog).
-        filter(ActivityLog.user_id == user.id)
-        .order_by(ActivityLog.timestamp.desc())
-        .limit(10)
-        .all())
-    
-    return activities
+    activity_logs = db.query(ActivityLog).filter(
+        ActivityLog.user_id == user.id
+    ).all()
+
+    mood_logs = db.query(MoodLog).filter(
+        MoodLog.user_id == user.id
+    ).all()
+
+    combined = []
+
+    for a in activity_logs:
+        combined.append({
+            "type": "activity",
+            "activity_id": a.activity_id,
+            "title": a.title,
+            "timestamp": a.timestamp
+        })
+
+    for m in mood_logs:
+        combined.append({
+            "type": "mood",
+            "mood": m.mood,
+            "timestamp": m.timestamp
+        })
+
+    combined.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    return combined[:15]

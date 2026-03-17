@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models.user import User
 from app.services.email import send_welcome_email
 from app.services.security import hash_password, verify_password, create_access_token, SECRET_KEY, ALGORITHM
+from app.services.security import get_current_user as get_user
 from datetime import date
 from jose import jwt
 import requests
@@ -11,27 +12,12 @@ import requests
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.get("/me")
-def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing token")
+def get_current_user(current_user: User = Depends(get_user)):
     
-    token = authorization.replace("Bearer ", "")
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("user_id")
-    except:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    user = db.query(User).filter(User.id == user_id).first()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
     return {
-        "name": user.name,
-        "username": user.username,
-        "email": user.email,
+        "name": current_user.name,
+        "username": current_user.username,
+        "email": current_user.email,
     }
 
 def calculate_age(dob: date):
@@ -106,6 +92,17 @@ async def manual_login(data: dict, db: Session = Depends(get_db)):
     
     token = create_access_token({"user_id": user.id})
     return {"access_token": token}
+
+@router.post("/forgot-password")
+def forgot_password(email:dict, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email["email"]).first()
+
+    if user:
+        #generate reset token
+        #send email or just log for now
+        print("Reset link set")
+
+    return {"message": "If account exists, email sent"}
 
 @router.post("/google")
 async def google_auth(data: dict, db: Session = Depends(get_db)):
