@@ -13,14 +13,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useEffect, useState } from 'react';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import * as Haptics from "expo-haptics";
 import DateTimePicker from "@react-native-community/datetimepicker";
-
-const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
-
+import { signupManual, checkUsernameAvailability } from "../components/api";
 export default function ManualSignupScreen({ navigation }) {
     
     /* -------------------- STATE -------------------- */
@@ -62,10 +58,8 @@ export default function ManualSignupScreen({ navigation }) {
         }
 
         try {
-            const res = await axios.get(
-                `${BACKEND_URL}/auth/check-username/${value.trim().toLowerCase()}`
-            );
-            setUsernameAvailable(res.data.available);
+            const available = await checkUsernameAvailability(value.trim());
+            setUsernameAvailable(available);
         } catch {
             setUsernameAvailable(null);
         }
@@ -146,15 +140,13 @@ export default function ManualSignupScreen({ navigation }) {
 
             const [day, month, year] = dob.split("-");
 
-            const res = await axios.post(`${BACKEND_URL}/auth/signup`, {
+            await signupManual({
                 name: name.trim(),
                 username: username.toLowerCase(),
                 email: email.toLowerCase(),
                 password,
                 date_of_birth: `${year}-${month}-${day}`
             });
-
-            await AsyncStorage.setItem("token", res.data.access_token);
 
             Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Success
