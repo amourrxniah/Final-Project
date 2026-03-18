@@ -8,14 +8,11 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef, useState } from "react";
+import React, {useRef, useState } from "react";
 import MaskedView from "@react-native-masked-view/masked-view";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import BottomNav from "../components/BottomNav";
-import axios from "axios";
-
-const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
+import { logMood } from "../components/api";
 
 /* -------------------- CONSTANTS --------------------*/
 const SCREEN_HEIGHT = Dimensions.get("window").height;
@@ -75,21 +72,14 @@ export default function MoodInputScreen({ navigation }) {
     if (!selected) return;
 
     try {
-      const token = await AsyncStorage.getItem("token");
-      console.log("TOKEn:", token);
-
-      await axios.post(
-        `${BACKEND_URL}/mood/log`,
-        { mood: selected },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await logMood(selected);
 
       navigation.navigate("DetectedContext", {
         mood: selected,
         moodTime: new Date().toISOString(),
       });
     } catch (err) {
-      console.log("Mood save failed", err);
+      console.log("Mood save failed", err.response?.data || err.message);
     }
   };
 

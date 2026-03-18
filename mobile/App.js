@@ -4,6 +4,7 @@ import WelcomeScreen from './src/screens/WelcomeScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
 import AuthChoiceScreen from './src/screens/AuthChoiceScreen';
 import ManualLoginScreen from './src/screens/ManualLoginScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import ManualSignupScreen from './src/screens/ManualSignupScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import MoodInputScreen from './src/screens/MoodInputScreen';
@@ -11,6 +12,7 @@ import DetectedContextScreen from './src/screens/DetectedContextScreen';
 import OverviewScreen from './src/screens/OverviewScreen';
 import RecommendationsScreen from './src/screens/RecommendationsScreen';
 import ActivityDetailsScreen from './src/screens/ActivityDetailsScreen';
+import MyActivitiesScreen from './src/screens/MyActivitiesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,6 +24,7 @@ export default function App() {
         <Stack.Screen name="Privacy" component={PrivacyScreen} />
         <Stack.Screen name="AuthChoice" component={AuthChoiceScreen} />
         <Stack.Screen name='ManualLogin' component={ManualLoginScreen} />
+        <Stack.Screen name='ForgotPassword' component={ForgotPasswordScreen} />
         <Stack.Screen name="ManualSignup" component={ManualSignupScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="MoodInput" component={MoodInputScreen} />
@@ -29,6 +32,8 @@ export default function App() {
         <Stack.Screen name="Overview" component={OverviewScreen} />
         <Stack.Screen name="Recommendations" component={RecommendationsScreen} />
         <Stack.Screen name="ActivityDetails" component={ActivityDetailsScreen} />
+        <Stack.Screen name="MyActivities" component={MyActivitiesScreen} />
+     
       </Stack.Navigator>
     </NavigationContainer>
   );

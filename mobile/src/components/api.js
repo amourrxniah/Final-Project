@@ -1,0 +1,301 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Crypto from "expo-crypto";
+import axios from "axios";
+
+export const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
+
+/* -------------------- AXIOS -------------------- */
+const api = axios.create({
+  baseURL: BACKEND_URL,
+  timeout: 15000,
+});
+
+/* attach token automatically */
+api.interceptors.request.use(async (config) => {
+  const token = await getToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+/* -------------------- DEVICE ID -------------------- */
+export const getDeviceId = async () => {
+  let deviceId = await AsyncStorage.getItem("device_id");
+
+  if (!deviceId) {
+    deviceId = Crypto.randomUUID();
+    await AsyncStorage.setItem("device_id", deviceId);
+  }
+
+  return deviceId;
+};
+
+/* -------------------- USER ID -------------------- */
+export const getUserId = async () => {
+  let userId = await AsyncStorage.getItem("user_id");
+
+  if (!userId) {
+    const deviceId = await getDeviceId();
+
+    const res = await api.post("/users/anonymous", {
+      device_id: deviceId,
+    });
+
+    userId = String(res.data.id);
+
+    await AsyncStorage.setItem("user_id", userId);
+  }
+
+  return userId;
+};
+
+/* -------------------- TOKEN -------------------- */
+export const saveToken = async (token) => {
+  await AsyncStorage.setItem("token", token);
+};
+
+export const getToken = async () => {
+  return await AsyncStorage.getItem("token");
+};
+
+/* -------------------- CONSENT -------------------- */
+export const checkConsent = async () => {
+  const cached = await AsyncStorage.getItem("userConsent");
+
+  if (cached === "true") {
+    return true;
+  }
+
+  try {
+    const userId = await getUserId();
+
+    const res = await api.get(`/consent/me`, {
+        params: { user_id: userId }
+    });
+
+    if (res.data?.accepted) {
+      await AsyncStorage.setItem("userConsent", "true");
+      return true;
+    }
+
+    return false;
+  } catch (err) {
+    console.log("Consent check error:", err);
+    return false;
+  }
+};
+
+export const acceptConsent = async () => {
+  const userId = await getUserId();
+  const deviceId = await getDeviceId();
+
+  await api.post("/consent/accept", {
+      user_id: userId,
+      device_id: deviceId,
+  });
+
+  await AsyncStorage.setItem("userConsent", "true");
+};
+
+/* -------------------- AUTH REQUEST -------------------- */
+export const authRequest = async (url, data) => {
+  const token = await getToken();
+
+  return axios.post(`${BACKEND_URL}${url}`, data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+/* -------------------- GET USER -------------------- */
+export const getCurrentUser = async () => {
+  const res = await api.get("/auth/me");
+
+  await AsyncStorage.setItem("user", JSON.stringify(res.data));
+
+  return res.data;
+};
+
+/* -------------------- GOOGLE LOGIN -------------------- */
+export const loginGoogle = async (accessToken) => {
+  const res = await api.post("/auth/google", {
+    access_token: accessToken,
+  });
+
+  await saveToken(res.data.access_token);
+  return res.data;
+};
+
+/* -------------------- APPLE LOGIN -------------------- */
+export const loginApple = async (credential) => {
+  const res = await api.post("/auth/apple", {
+    email: credential.email,
+    full_name: credential.fullName,
+  });
+
+  await saveToken(res.data.access_token);
+  return res.data;
+};
+
+/* -------------------- RESET PASSWORD -------------------- */
+export const requestPasswordReset = async (email) => {
+  const res = await api.post("/auth/forgot-password", { email });
+  return res.data;
+};
+
+/* -------------------- MANUAL SIGNUP -------------------- */
+export const loginManual = async (identifier, password) => {
+  const res = await api.post("/auth/login", {
+    identifier: identifier.toLowerCase(),
+    password,
+  });
+
+  await saveToken(res.data.access_token);
+  return getCurrentUser();
+};
+
+/* -------------------- USERNAME CHECK -------------------- */
+export const checkUsernameAvailability = async (username) => {
+  const res = await api.get(`/auth/check-username/${username.toLowerCase()}`);
+  return res.data.available;
+};
+
+/* -------------------- MANUAL SIGNUP -------------------- */
+export const signupManual = async ({
+  name,
+  username,
+  email,
+  password,
+  date_of_birth,
+}) => {
+  const res = await api.post("/auth/signup", {
+    name,
+    username,
+    email,
+    password,
+    date_of_birth,
+  });
+
+  await saveToken(res.data.access_token);
+  return getCurrentUser();
+};
+
+/* -------------------- MOOD STATS -------------------- */
+export const getMoodStats = async () => {
+  const res = await api.get("/mood/stats");
+  return res.data;
+};
+
+/* -------------------- MOOD TREND -------------------- */
+export const getMoodTrend = async (mode) => {
+    try {
+      const res = await api.get(`/mood/trend?mode=${mode}`);
+      return res.data;
+    } catch (err) {
+        console.log("Trend API error:", err.response?.data || err.message);
+        return [];
+    }
+
+};
+
+/* -------------------- RECENT ACTIVITY -------------------- */
+export const getRecentActivity = async () => {
+  const res = await api.get("/mood/activity/recent");
+  return res.data;
+};
+
+/* -------------------- LOG MOOD -------------------- */
+export const logMood = async (mood) => {
+  const res = await api.post("/mood/log", { mood });
+  return res.data;
+};
+
+/* -------------------- CONTEXT DETECTION -------------------- */
+export const getContext = async (latitude, longitude) => {
+  const res = await api.get("/context", {
+    params: {
+      lat: latitude,
+      lon: longitude,
+    },
+  });
+
+  return res.data;
+};
+
+/* -------------------- GET RECOMMENDATIONS -------------------- */
+export const getRecommendations = async ({
+  mood,
+  weather,
+  timeOfDay,
+  latitude,
+  longitude,
+}) => {
+  const res = await api.get("/recommendations", {
+    params: {
+      mood,
+      weather,
+      time_of_day: timeOfDay,
+      lat: latitude,
+      lon: longitude,
+    },
+  });
+
+  return res.data;
+};
+
+/* -------------------- GET USER ACTIVITY STATE -------------------- */
+export const getUserActivities = async () => {
+  const res = await api.get("/activities/my");
+  return res.data;
+};
+
+/* -------------------- FAVOURITE ACTIVITY -------------------- */
+export const addFavourite = async (activityId) => {
+  const res = await api.post("/favourites", {
+     activity_id: activityId
+});
+
+  return res.data;
+};
+
+export const getFavouriteState = async (activityId) => {
+  const res = await api.get(`/favourites/${activityId}`);
+
+  return res.data;
+};
+
+/* -------------------- REMOVE FAVOURITE -------------------- */
+export const removeFavourite = async (activityId) => {
+  const res = await api.delete(`/favourites/${activityId}`);
+
+  return res.data;
+};
+/* -------------------- ACTIVITY FEEDBACK -------------------- */
+export const getActivityFeedback = async (activityId) => {
+    const res = await api.get(`/feedback/${activityId}`);
+    return res.data;
+};
+
+export const sendActivityFeedback = async ({
+    activityId,
+    rating,
+    feedback
+}) => {
+  const res = await api.post("/feedback", {
+      activity_id: activityId,
+      rating,
+      feedback
+    });
+
+  return res.data;
+};
+/* -------------------- LOG ACTIVITY OPEN -------------------- */
+export const logActivityOpen = async (activityId) => {
+  const res = await api.post(`/activities/log/${activityId}`);
+  return res.data;
+};
+
+export default api;

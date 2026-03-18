@@ -14,15 +14,21 @@ import * as Location from "expo-location";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import BottomNav from "../components/BottomNav";
 import SkeletonCard from "../components/SkeletonCard";
 import { useFavouriteAnimation } from "../components/useFavouriteAnimation";
+import { 
+  getRecommendations,
+  getUserActivities,
+  addFavourite,
+  removeFavourite,
+  sendActivityFeedback,
+  logActivityOpen
+ } from "../components/api";
 
 /* -------------------- CONFIG -------------------- */
-const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
 const ITEMS_PER_PAGE = 5;
 
 if (
@@ -94,12 +100,17 @@ export default function RecommendationsScreen({ route, navigation }) {
   /* --------------- STATE --------------- */
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [page, setPage] = useState(0);
   const [visibleCount, setVisibleCount] = useState(3);
+
   const [feedback, setFeedback] = useState({});
+  const [favourites, setFavourites] = useState({});
+
   const [sortOpen, setSortOpen] = useState(false);
   const [sortMode, setSortMode] = useState("relevance");
-  const [favourites, setFavourites] = useState({});
+  
+  const [undoItem, setUndoItem] = useState(null);
 
   const heartRefs = useRef({});
   const favouritesTargetRef = useRef(null);
@@ -107,11 +118,12 @@ export default function RecommendationsScreen({ route, navigation }) {
   const { animateToTarget, FlyingHeart, bookmarkPulse } =
     useFavouriteAnimation();
 
-  /* --------------- ANIMATION --------------- */
-  const animatedValues = useRef([]).current;
+  const animatedValues = useRef([]);
 
+  /* --------------- INITIAL LOAD --------------- */
   useEffect(() => {
     loadRecommendations();
+    loadUserState();
   }, []);
 
   useEffect(() => {
@@ -120,7 +132,7 @@ export default function RecommendationsScreen({ route, navigation }) {
     return () => clearTimeout(t);
   }, [page]);
 
-  /* -------------------- DATA LOADING --------------------*/
+  /* -------------------- LOAD RECOMMENDATIONS --------------------*/
   const loadRecommendations = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -129,20 +141,26 @@ export default function RecommendationsScreen({ route, navigation }) {
       const { coords } = await Location.getCurrentPositionAsync();
       const timeOfDay = getTimeOfDay();
 
-      const res = await fetch(
-        `${BACKEND_URL}/recommendations/?mood=${mood}&weather=${weather?.condition || ""}&time_of_day=${timeOfDay}&lat=${coords.latitude}&lon=${coords.longitude}`,
-      );
-
-      const data = await res.json();
+      const data = await getRecommendations({
+        mood,
+        weather: weather?.condition || "",
+        timeOfDay,
+        latitude: coords.latitude,
+        longitude: coords.longitude
+      });
+      
       if (!Array.isArray(data)) return setLoading(false);
 
       const mapped = data.map((item) => ({
         ...item,
         distanceNum: item.distance || 0,
-        distance: item.distance ? (item.distance * 0.621371).toFixed(1) : "N/A",
+        distance: item.distance 
+          ? (item.distance * 0.621371).toFixed(1) 
+          : "N/A",
       }));
 
       animatedValues.current = mapped.map(() => new Animated.Value(0));
+      
       setActivities(mapped);
       setLoading(false);
 
@@ -158,68 +176,129 @@ export default function RecommendationsScreen({ route, navigation }) {
           ),
         ).start();
       });
-    } catch (e) {
-      console.log(e);
+
+    } catch (err) {
+      console.log("Recommendation load error:", err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const [undoItem, setUndoItem] = useState(null);
+  /* -------------------- LOAD USER STATE --------------------*/
+  const loadUserState = async () => {
+    try {
+      const data = await getUserActivities();
+      
+      const favMap = {};
+      const fbMap = {};
 
+      data.forEach((a) => {
+        if (a.is_favourite) favMap[a.id] = true;
+        if (a.is_helpful) fbMap[a.id] = "up";
+        if (a.not_for_me) fbMap[a.id] = "down";
+      });
+
+      setFavourites(favMap);
+      setFeedback(fbMap);
+
+    } catch (err) {
+      console.log("Failed loading stored preferences", err);
+    }
+  };
+
+  /* -------------------- FAVOURITES --------------------*/
   const toggleFavourite = async (item) => {
     const isAdding = !favourites[item.id];
 
+    //updating
     setFavourites((prev) => ({ ...prev, [item.id]: isAdding }));
 
-    if (isAdding) {
-      // animate heart to bookmark
-      heartRefs.current[item.id].measureInWindow((sx, sy, sw, sh) => {
-        favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
-          animateToTarget(
-            { x: sx + sw / 2 - 15, y: sy + sh / 2 - 15 },
-            { x: ex + ew / 2 - 15, y: ey + eh / 2 - 15 },
-          );
+    try {
+      if (isAdding) {
+        // animate heart to bookmark
+        heartRefs.current[item.id].measureInWindow((sx, sy, sw, sh) => {
+          favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
+            animateToTarget(
+              { x: sx + sw / 2 - 15, y: sy + sh / 2 - 15 },
+              { x: ex + ew / 2 - 15, y: ey + eh / 2 - 15 },
+            );
+          });
         });
-      });
 
-      try {
-        const token = await AsyncStorage.getItem("token");
-
-        await axios.post(
-          `${BACKEND_URL}/favourites`,
-          { activity_id: item.id },
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        await addFavourite(item.id);
 
         setUndoItem(item);
 
-        //auto hude undo after 5 seconds
+        //auto hide undo after 5 seconds
         setTimeout(() => setUndoItem(null), 5000);
-      } catch (err) {
-        console.log("Favourite toggle failed", err);
+      } else {
+        await removeFavourite(item.id);
       }
-    } else {
-      await removeFavouriteFromDB(item.id);
+    } catch (err) {
+      console.log("Favourite failed", err);
+
+      //revert if failed
+      setFavourites((prev) => ({ ...prev, [item.id]: !isAdding }));
     }
   };
 
   const removeFavouriteFromDB = async (id) => {
     try {
-      const token = await AsyncStorage.getItem("token");
-
-      await axios.delete(`${BACKEND_URL}/favourites/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await removeFavourite(id);
     } catch (err) {
-      console.log("Failed to remove favourite", err);
+      console.log("Undo failed", err);
     }
   };
 
+  /* -------------------- FEEDBACK --------------------*/
+  const handleFeedback = async (activityId, type) => {
+    const current = feedback[activityId];
+    const newValue = current === type ? null : type;
+
+    setFeedback((prev) => ({
+      ...prev,
+      [activityId]: newValue,
+    }));
+
+    try {
+      await sendActivityFeedback(activityId, type);
+
+    } catch (err) {
+      console.log("Feedback failed", err);
+
+      //revert on error
+      setFeedback((prev) => ({
+        ...prev,
+        [activityId]: current,
+      }));
+    }
+  };
+
+  /* --------------- OPEN ACTIVITY --------------- */
+  const openActivity = async (activity, rank) => {
+    try {
+      await logActivityOpen(activity.id);
+    } catch (err) {
+      console.log("Log error", err);
+    }
+      navigation.navigate("ActivityDetails", { 
+        activity,
+        mood,
+        weather: weather?.condition,
+        rank
+      });
+  };
+
   /* --------------- SORTING --------------- */
-  const sortedActivities = [...activities].sort((a, b) =>
-    sortMode === "distance" ? a.distanceNum - b.distanceNum : b.score - a.score,
-  );
+  const sortedActivities = Array.isArray(activities)
+    ? [...activities].sort((a, b) => {
+        if (sortMode === "distance") {
+          return (a?.distanceNum ?? 0) - (b?.distanceNum ?? 0);
+        } else {
+          return (b?.score ?? 0) - (a?.score ?? 0);
+        }
+      })
+    : [];
 
   const totalPages = Math.ceil(sortedActivities.length / ITEMS_PER_PAGE);
 
@@ -324,35 +403,25 @@ export default function RecommendationsScreen({ route, navigation }) {
               const tag = getTagFromCategories(item.category_names || []);
               const state = feedback[item.id];
 
+              const animatedStyle = {
+                opacity: animatedValues.current[index] || 1,
+                transform: [
+                  {
+                    translateY:
+                      animatedValues.current[index]?.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }) || 0,
+                  }
+                ]
+              };
+
               return (
                 <View key={item.id} style={styles.cardWrapper}>
                   <TouchableOpacity
                     style={styles.card}
                     activeOpacity={0.9}
-                    onPress={async () => {
-                      try {
-                        const token = await AsyncStorage.getItem("token");
-                        
-                        await axios.post(
-                          `${BACKEND_URL}/mood/activity/view`,
-                          { id: item.id,
-                            title: item.title,
-                           },
-                          { headers: { Authorization: `Bearer ${token}` } },
-                        );
-                      } catch (err) {
-                        console.log("Navigation error", err);
-                      }
-
-                      //always navigate
-                      navigation.navigate("ActivityDetails", {
-                          activity: item,
-                          allActivities: sortedActivities,
-                          mood,
-                          weather: weather?.condition,
-                          rank: rank,
-                      });
-                    }}
+                    onPress={() => openActivity(item, rank)}
                   >
                     {/* RANK */}
                     <View style={styles.rankCircle}>
@@ -365,7 +434,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                       style={styles.heart}
                       onPress={(e) => {
                         e.stopPropagation();
-                        toggleFavourite(item)
+                        toggleFavourite(item);
                       }}
                     >
                       <MaterialCommunityIcons
@@ -412,9 +481,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                           styles.feedbackBtn,
                           state === "up" && styles.activeBtn,
                         ]}
-                        onPress={() =>
-                          setFeedback((prev) => ({ ...prev, [item.id]: "up" }))
-                        }
+                        onPress={() => handleFeedback(item.id, "up")}
                       >
                         <MaterialCommunityIcons
                           name={
@@ -422,7 +489,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                           }
                           size={20}
                         />
-                        <Text>Helpful</Text>
+                        <Text>Like</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -430,9 +497,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                           styles.feedbackBtn,
                           state === "down" && styles.activeBtn,
                         ]}
-                        onPress={() =>
-                          setFeedback({ ...feedback, [item.id]: "down" })
-                        }
+                        onPress={() => handleFeedback(item.id, "down")}
                       >
                         <MaterialCommunityIcons
                           name={
@@ -442,7 +507,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                           }
                           size={20}
                         />
-                        <Text>Not Helpful</Text>
+                        <Text>Dislike</Text>
                       </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
@@ -493,9 +558,16 @@ export default function RecommendationsScreen({ route, navigation }) {
 
       {undoItem && (
         <View style={styles.undoContainer}>
-          <Text style={styles.undoText}>
-            Added "{undoItem.title}" to favourites
-          </Text>
+          <View style={styles.undoTextWrap}>
+            <Text
+              style={styles.undoText}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              Added "{undoItem.title}" to favourites
+            </Text>
+          </View>
+
           <TouchableOpacity
             onPress={() => {
               setFavourites((prev) => ({ ...prev, [undoItem.id]: false }));
@@ -645,12 +717,17 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     backgroundColor: "#333",
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 20,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    zIndex: 9999
+    zIndex: 9999,
+  },
+
+  undoTextWrap: {
+    flex: 1,
+    marginRight: 12,
   },
 
   undoText: {
@@ -659,8 +736,8 @@ const styles = StyleSheet.create({
   },
 
   undoBtn: {
-    color: "#fff4fa3",
-    fontWeight: "800"
+    color: "#ff4fa3",
+    fontWeight: "800",
   },
 
   card: {
@@ -751,8 +828,10 @@ const styles = StyleSheet.create({
 
   feedback: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 12,
+    gap: 10,
   },
 
   feedbackBtn: {

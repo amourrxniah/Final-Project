@@ -67,16 +67,25 @@ export default function OverviewScreen({ navigation }) {
     
     const mood = route?.params?.mood ?? null;
     const moodTime = route?.params?.moodTime ?? new Date().toISOString();
-    const timeOfDay = route?.params?.timeOfDay ?? "Evening";
+    const timeOfDay = (route?.params?.timeOfDay ?? "evening").toLowerCase();
     const weather = route?.params?.weather ?? null;
 
     const { label, icon, color, bg } = moodConfig(mood);
     const weatherIcon = getWeatherIcon(weather?.condition);
 
     const getTimeGradient = () => {
-        if (timeOfDay === "Morning") return ["#ffe29f", "#ffa99f"];
-        if (timeOfDay === "Afternoon") return ["#ffd194", "#ff6a88"];
-        return ["#667eea", "#764ba2"];
+        switch (timeOfDay) {
+            case "morning":
+                return ["#ffe29f", "#ffa99f"];
+            case "afternoon":
+                return ["#ffd194", "#ff6a88"];
+            case "evening":
+                return ["#667eea", "#764ba2"];
+            case "night":
+                return ["#0f2027", "#203a43"];
+            default:
+                return ["#b993d6", "#8ca6db"];
+        }
     };
 
     const getWeatherGradient = () => {
@@ -163,10 +172,12 @@ export default function OverviewScreen({ navigation }) {
                                 >
                                     <MaterialCommunityIcons
                                         name={
-                                            timeOfDay === "Morning"
+                                            timeOfDay === "morning"
                                                 ? "weather-sunset-up"
-                                                : timeOfDay === "Afternoon"
+                                                : timeOfDay === "afternoon"
                                                 ? "weather-sunny"
+                                                : timeOfDay === "evening"
+                                                ? "weather-sunset-down"
                                                 : "weather-night"
                                         }
                                         size={50}
@@ -174,7 +185,7 @@ export default function OverviewScreen({ navigation }) {
                                     />
                                     <View>
                                         <Text style={styles.contextLabel}>Time of Day</Text>
-                                        <Text style={styles.contextValue}>{timeOfDay}</Text>
+                                        <Text style={styles.contextValue}>{capitalize(timeOfDay)}</Text>
                                     </View>
                                 </LinearGradient>
 

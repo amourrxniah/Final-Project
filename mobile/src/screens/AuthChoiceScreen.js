@@ -6,12 +6,9 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Linking from "expo-linking";
 import { useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from "axios";
+import { loginGoogle, loginApple } from '../components/api';
 
 WebBrowser.maybeCompleteAuthSession();
-
-const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
 
 export default function AuthChoiceScreen({ navigation }) {
 
@@ -33,29 +30,28 @@ export default function AuthChoiceScreen({ navigation }) {
     }, [response]);
 
     const handleGoogleLogin = async (accessToken) => {
-        const res = await axios.post(`${BACKEND_URL}/auth/google`, {
-            access_token: accessToken
-        });
-
-        await AsyncStorage.setItem("token", res.data.access_token);
-        navigation.replace("Home");
+        try {
+            await loginGoogle(accessToken);
+            navigation.replace("Home");
+        } catch (err) {
+            console.log("Google login error:", err);
+        }
     };
 
     const handleAppleLogin = async () => {
-        const credential = await AppleAuthentication.signInAsync({
-            requestedScopes: [
-                AppleAuthentication.AppleAuthenticationScope.EMAIL,
-                AppleAuthentication.AppleAuthenticationScope.FULL_NAME
-            ]
-        });
+        try {
+            const credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME
+                ]
+            });
 
-        const res = await axios.post(`${BACKEND_URL}/auth/apple`, {
-            email: credential.email,
-            full_name: credential.fullName
-        });
-
-        await AsyncStorage.setItem("token", res.data.access_token);
-        navigation.replace("Home");
+            await loginApple(credential);
+            navigation.replace("Home");
+        } catch (err) {
+            console.log("Apple login error:", err);
+        }
     };
 
     return (

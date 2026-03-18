@@ -45,6 +45,7 @@ export default function BottomNav({
                         name="bookmark-outline" 
                         color={iconColor("favourites")}
                         ref={favouriteRef}
+                        onPress={() => navigation.navigate("MyActivities")}
                     />
                 </Animated.View>
                 
@@ -60,7 +61,6 @@ export default function BottomNav({
         </View>
     );
 }
-
 
 
 export { NavIcon };

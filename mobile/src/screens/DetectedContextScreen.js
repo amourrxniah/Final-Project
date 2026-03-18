@@ -8,10 +8,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRoute } from "@react-navigation/native";
-
-const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
+import { getContext } from "../components/api";
 
 const capitalize = (str) => {
     if (!str) return "";
@@ -60,14 +58,11 @@ export default function DetectedContextScreen({ navigation }) {
             const location = await Location.getCurrentPositionAsync({});
             const { latitude, longitude } = location.coords;
 
-            const url = `${BACKEND_URL}/context?lat=${latitude}&lon=${longitude}`;
-            const res = await fetch(url);
-
-            const data = await res.json();
+            const data = await getContext(latitude, longitude);
             setWeather(data.weather);
-        } catch {
-
-        } finally {
+        } catch (err) {
+            console.log("Context detection failed:", err.message)
+;        } finally {
             setTimeout(() => setLoading(false), 600);
         }
     };
