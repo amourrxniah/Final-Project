@@ -8,22 +8,14 @@ import {
   RefreshControl,
   ActivityIndicator,
   ScrollView,
-  PanResponder,
   Easing,
   useWindowDimensions,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-
-import Svg, {
-  Path,
-  Circle,
-  Line,
-  Text as SvgText,
-  Defs,
-  LinearGradient as SvgGradient,
-  Stop,
-} from "react-native-svg";
+import * as Haptics from "expo-haptics";
+import Svg, { Path, Circle, Line, Text as SvgText } from "react-native-svg";
+import ProductionChart from "../components/ProductionChart";
 import BottomNav from "../components/BottomNav";
 import { useFocusEffect } from "@react-navigation/native";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
@@ -81,7 +73,8 @@ export default function HomeScreen({ navigation }) {
       const data = await getMoodTrend(mode);
       const safeData = (data || []).map((d) => ({
         ...d,
-        value: Number(d.value) || 0,
+        value: Math.max(0, Math.min(2, Number(d.value) || 1)),
+        has_data: d.has_data ?? true,
       }));
 
       setTrend(safeData);
@@ -99,6 +92,7 @@ export default function HomeScreen({ navigation }) {
       const init = async () => {
         setLoading(true);
         await loadCore();
+        await loadTrend("live");
         setLoading(false);
       };
       init();
@@ -108,6 +102,15 @@ export default function HomeScreen({ navigation }) {
   /* -------------------- TREND MODE CHANGE -------------------- */
   useEffect(() => {
     loadTrend(viewMode);
+  }, [viewMode]);
+
+  /* -------------------- AUTO REFRESH TREND -------------------- */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadTrend(viewMode);
+    }, 10000); //every 5s
+
+    return () => clearInterval(interval);
   }, [viewMode]);
 
   /* -------------------- PULL TO REFRESH -------------------- */
@@ -242,19 +245,20 @@ export default function HomeScreen({ navigation }) {
               color="#ba55d3"
             />
 
-            <Text style={styles.cardTitle}>Mood Trend</Text>
-            <View>
+            <View style={{ marginLeft: 10, flex: 1 }}>
+              <Text style={styles.cardTitle}>Mood Trend</Text>
               <Text style={styles.chartHint}>
                 Tap a point to see exact mood
               </Text>
             </View>
+
+            <View style={{ marginTop: 4 }}></View>
           </View>
 
           <SegmentedControl value={viewMode} onChange={setViewMode} />
 
           <View style={{ position: "relative" }}>
-            <SmoothChart data={trend} viewMode={viewMode} />
-            {/* <SmoothChart data={trend} viewMode={viewMode} /> */}
+            <ProductionChart data={trend} viewMode={viewMode} />
 
             {trendLoading && (
               <View style={styles.chartOverlay}>
@@ -409,404 +413,6 @@ function StatCard({ icon, label, color, value }) {
     </View>
   );
 }
-
-/* -------------------- SMOOTH CURVED CHART -------------------- */
-const SmoothChart = ({ data = [], viewMode }) => {
-  const [selectedIndex, setSelectedIndex] = useState(null);
-  const [scale, setScale] = useState(1.2);
-
-  const animProgress = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-
-  const lastDistance = useRef(null);
-  const scrollRef = useRef(null);
-
-  /* ---------- ANIMATE LINE DRAW ---------- */
-  useEffect(() => {
-    animProgress.setValue(0);
-    fadeAnim.setValue(0);
-
-    Animated.parallel([
-      Animated.timing(animProgress, {
-        toValue: 1,
-        duration: 1200,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: false,
-      }),
-    ]).start();
-
-    setSelectedIndex(null);
-  }, [data]);
-
-  /* ---------- POINT PULSE ANIMATION ---------- */
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.3,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, []);
-
-  /* ---------- AUTO SCROLL ---------- */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      scrollRef.current?.scrollToEnd?.({ animated: true });
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [data, scale]);
-
-  /* ---------- EMPTY STATE ---------- */
-  if (!data || !data.length === 0) {
-    return (
-      <View style={styles.emptyChart}>
-        <MaterialCommunityIcons name="chart-line" size={40} color="#ddd" />
-        <Text style={styles.emptyChartText}>No mood data yet.</Text>
-      </View>
-    );
-  }
-
-  /* ---------- DIMENSIONS ---------- */
-  const chartHeight = 240;
-  const yAxisWidth = 55;
-  const paddingRight = 30;
-  const paddingTop = 20;
-  const paddingBottom = 50;
-
-  const graphHeight = chartHeight - paddingTop - paddingBottom;
-  const maxValue = 2;
-  const stepY = graphHeight / maxValue;
-
-  //each point gets fixed spacing
-  const baseSpacing =
-    viewMode === "live"
-      ? 80
-      : viewMode === "yesterday"
-        ? 90
-        : viewMode === "week"
-          ? 120
-          : 90; //daily default
-
-  const pointSpacing = baseSpacing * scale;
-  const chartWidth = paddingRight + (data.length - 1) * pointSpacing;
-
-  /* ---------- SAFE POINTS ---------- */
-  const points = data.map((d, i) => {
-    const val =
-      typeof d.value === "number" ? d.value : parseFloat(d.value) || 0;
-
-    const safeVal = Math.max(0, Math.min(2, Math.round(val)));
-
-    return {
-      x: i * pointSpacing,
-      y: paddingTop + (graphHeight - safeVal * stepY),
-      label: d.time || d.day || "",
-      value: safeVal,
-      hasData: d.has_data !== false,
-    };
-  });
-
-  /* ---------- CURVE GENERATION ---------- */
-  const getBezierPath = (pts) => {
-    if (!pts || pts.length < 2) return null;
-
-    let path = `M ${pts[0].x} ${pts[0].y}`;
-
-    for (let i = 0; i < pts.length - 1; i++) {
-      const xMid = (pts[i].x + pts[i + 1].x) / 2;
-
-      path += ` C ${xMid} ${pts[i].y},
-                ${xMid} ${pts[i + 1].y},
-                ${pts[i + 1].x} ${pts[i + 1].y}`;
-    }
-    return path;
-  };
-
-  const curvePath = getBezierPath(points);
-
-  //approximate total path length for stroke dash animation
-  const pathLength = curvePath ? 1000 : 1;
-
-  const strokeDash = animProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [pathLength, 0],
-  });
-
-  /* ---------- PINCH ZOOM ---------- */
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: (_, gs) => gs.numberActiveTouches === 2,
-      onMoveShouldSetPanResponder: (_, gs) => gs.numberActiveTouches === 2,
-
-      onPanResponderMove: (e) => {
-        const touches = e.nativeEvent.touches;
-
-        if (touches.length === 2) {
-          const dx = touches[0].pageX - touches[1].pageX;
-          const dy = touches[0].pageY - touches[1].pageY;
-
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (lastDistance.current != null) {
-            const scaleFactor = dist / lastDistance.current;
-            setScale((prev) => Math.min(4, Math.max(0.8, prev * scaleFactor)));
-          }
-
-          lastDistance.current = dist;
-        }
-      },
-
-      onPanResponderRelease: () => {
-        lastDistance.current = null;
-      },
-    }),
-  ).current;
-
-  const moodLabels = ["Low", "Neutral", "High"];
-  const moodColors = ["#ff4fa3", "#9b5de5", "#2ec4b6"];
-
-  /* ---------- TAP SELECT ---------- */
-  const handlePress = (e) => {
-    const { locationX, locationY } = e.nativeEvent;
-
-    let closest = null;
-    let minDist = Infinity;
-
-    points.forEach((p, i) => {
-      const dist = Math.hypot(p.x - locationX, p.y - locationY);
-      if (dist < minDist) {
-        minDist = dist;
-        closest = i;
-      }
-    });
-
-    if (minDist < 25) {
-      setSelectedIndex((prev) => (prev === closest ? null : closest));
-    }
-  };
-
-  return (
-    <View>
-      <View style={{ flexDirection: "row" }}>
-        {/* FIXED Y AXIS */}
-        <Svg width={yAxisWidth} height={chartHeight}>
-          {[0, 1, 2].map((v) => (
-            <SvgText
-              key={v}
-              x={yAxisWidth - 8}
-              y={paddingTop + graphHeight - v * stepY + 4}
-              fontSize="11"
-              fill={moodColors[v]}
-              textAnchor="end"
-              fontWeight="600"
-            >
-              {moodLabels[v]}
-            </SvgText>
-          ))}
-
-          <Line
-            x1={yAxisWidth}
-            y1={paddingTop}
-            x2={yAxisWidth}
-            y2={chartHeight - paddingBottom}
-            stroke="#ccc"
-            strokeWidth="2"
-          />
-        </Svg>
-
-        {/* SCROLLABLE GRAPH AREA */}
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          bounces={false}
-          {...panResponder.panHandlers}
-        >
-          <Svg width={chartWidth} height={chartHeight} onPress={handlePress}>
-            <Defs></Defs>
-            {/* VERTICAL GRID LINES */}
-            {points.map((p, i) => (
-              <Line
-                key={`v-${i}`}
-                x1={p.x}
-                y1={paddingTop}
-                x2={p.x}
-                y2={chartHeight - paddingBottom}
-                stroke="#e8e8f0"
-                strokeWidth="1"
-                strokeDasharray="4,4"
-              />
-            ))}
-
-            {/* HORIZONTAL GRID LINES */}
-            {[0, 1, 2].map((v) => (
-              <Line
-                key={`h-${v}`}
-                x1={0}
-                y1={paddingTop + (graphHeight - v * stepY)}
-                x2={chartWidth - paddingRight}
-                y2={paddingTop + (graphHeight - v * stepY)}
-                stroke="#e8e8f0"
-                strokeWidth="1"
-              />
-            ))}
-
-            {/* X AXIS */}
-            <Line
-              x1={0}
-              y1={chartHeight - paddingBottom}
-              x2={chartWidth}
-              y2={chartHeight - paddingBottom}
-              stroke="#ccc"
-              strokeWidth="2"
-            />
-
-            {/* X AXIS LABELS (days) */}
-            {points.map((p, i) => {
-              const labelFrequency =
-                viewMode === "live"
-                  ? 1 //every point
-                  : viewMode === "yesterday"
-                    ? 1 //hourly labels
-                    : viewMode === "week"
-                      ? 1
-                      : 5;
-
-              //monthly = skip  labels to avoid crowding
-              if (i % labelFrequency !== 0 && i !== points.length - 1)
-                return null;
-
-              return (
-                <SvgText
-                  key={`xlab-${i}`}
-                  x={p.x}
-                  y={chartHeight - paddingBottom + 18}
-                  fontSize="10"
-                  fill="#888"
-                  textAnchor="middle"
-                >
-                  {p.label}
-                </SvgText>
-              );
-            })}
-
-            {/* VERTICAL HIGHLIGHT LINE on selected */}
-            {selectedIndex !== null && points[selectedIndex] && (
-              <Line
-                x1={points[selectedIndex].x}
-                y1={paddingTop}
-                x2={points[selectedIndex].x}
-                y2={chartHeight - paddingBottom}
-                stroke="#9b5de5"
-                strokeWidth="2"
-                strokeOpacity="0.5"
-              />
-            )}
-
-            {/* ANIMATED BEZIER LINE */}
-            {curvePath && (
-              <>
-                <AnimatedPath
-                  d={curvePath}
-                  stroke="#ff4fa3"
-                  strokeWidth="5"
-                  strokeOpacity="0.25"
-                  fill="none"
-                />
-
-                <AnimatedPath
-                  d={curvePath}
-                  stroke="#c77dff"
-                  strokeWidth="4"
-                  strokeOpacity="0.5"
-                  fill="none"
-                />
-
-                <AnimatedPath
-                  d={curvePath}
-                  stroke="#9b5de5"
-                  strokeWidth="3"
-                  fill="none"
-                  strokeDasharray={pathLength}
-                  strokeDashoffset={strokeDash}
-                  strokeLinecap="round"
-                />
-              </>
-            )}
-
-            {/* POINTS */}
-            {points.map((p, i) => (
-              <AnimatedCircle
-                key={i}
-                cx={p.x}
-                cy={p.y}
-                r={selectedIndex === i ? 11 : p.hasData ? 7 : 4}
-                transform={
-                  selectedIndex === i
-                    ? [{ scale: pulseAnim }]
-                    : [{ scale: 1 }]
-                }
-                fill={
-                  !p.hasData
-                    ? "#ddd"
-                    : selectedIndex === i
-                      ? "#ff4fa3"
-                      : moodColors[p.value]
-                }
-                stroke={selectedIndex === i ? "#fff" : "#ffffffaa"}
-                strokeWidth="2"
-              />
-            ))}
-          </Svg>
-        </ScrollView>
-      </View>
-
-      {/* TOOLTIP */}
-      {selectedIndex !== null && points[selectedIndex] && (
-        <View style={styles.tooltip}>
-          <Text style={styles.tooltipTime}>{points[selectedIndex].label}</Text>
-
-          <View style={styles.tooltipRow}>
-            <View
-              style={[
-                styles.tooltipDot,
-                { backgroundColor: moodColors[points[selectedIndex].value] },
-              ]}
-            />
-
-            <Text style={styles.tooltipMood}>
-              {moodLabels[points[selectedIndex].value]}
-            </Text>
-          </View>
-
-          {!points[selectedIndex].hasData && (
-            <Text style={styles.tooltipEmpty}>No mood logged</Text>
-          )}
-          <Text style={styles.tooltipText}>
-            {points[selectedIndex].label} •{" "}
-            {moodLabels[points[selectedIndex].value]}
-            {!points[selectedIndex].hasData ? " (no log)" : ""}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-};
 
 /* -------------------- LEGEND -------------------- */
 function MoodLegend() {
@@ -1079,7 +685,7 @@ const styles = StyleSheet.create({
 
   cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 14,
   },
 
@@ -1092,7 +698,6 @@ const styles = StyleSheet.create({
   chartHint: {
     fontSize: 12,
     color: "#888",
-    marginBottom: -30,
   },
 
   toggleRow: {
@@ -1112,25 +717,6 @@ const styles = StyleSheet.create({
   toggleActive: {
     backgroundColor: "#9b5de5",
   },
-
-  emptyText: {
-    color: "#888",
-    marginTop: 10,
-  },
-
-  emptyChart: {},
-
-  emptyChartText: {},
-
-  tooltipTime: {},
-
-  tooltipRow: {},
-
-  tooltipDot: {},
-
-  tooltipDot: {},
-
-  tooltipEmpty: {},
 
   legendRow: {
     flexDirection: "row",
@@ -1211,7 +797,7 @@ const styles = StyleSheet.create({
     shadowColor: "#9b5de5",
     shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 5
+    elevation: 5,
   },
 
   segment: {
