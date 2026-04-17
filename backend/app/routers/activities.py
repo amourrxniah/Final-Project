@@ -114,3 +114,43 @@ def log_activity(
     db.commit()
 
     return {"status": "Activity logged successfully"}
+
+@router.get("/search")
+def search_activities(
+    q: str,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
+):
+    if not q:
+        return []
+    
+    query = q.lower()
+
+    activities = db.query(Activity).all()
+
+    def score(activity):
+        title = activity.title.lower()
+
+        score = 0
+        if title.startswith(query):
+            score += 3
+        if query in title:
+            score += 2
+        return score
+    
+    ranked = sorted(
+        activities, 
+        key=score, 
+        reverse=True
+    )
+
+    results = [
+        {
+            "id": a.id,
+            "title": a.title,
+            "description": a.subtitle
+        }
+        for a in ranked if score(a) > 0
+    ][:8] # limit results
+
+    return results
