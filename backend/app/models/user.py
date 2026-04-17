@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Date, Boolean
+from sqlalchemy import Column, Integer, String, Date, DateTime, Boolean
 from app.database import Base
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
 class User(Base):
@@ -18,6 +19,9 @@ class User(Base):
     total_syncs = Column(Integer, default=0)
     current_streak = Column(Integer, default=0)
     last_logged_date = Column(Date, nullable=True)
+
+    profile_image = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     favourites = relationship(
         "Favourite",

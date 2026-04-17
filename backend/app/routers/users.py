@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
+from app.services.security import get_current_user
+import os
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/anonymous")
 def create_anonymous_user(data: dict, db: Session = Depends(get_db)):
@@ -43,3 +48,37 @@ def link_device(data: dict, db: Session = Depends(get_db)):
     db.commit()
 
     return {"status": "linked"}
+
+@router.post("/upload-profile-img")
+async def  upload_profile_img(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    try:
+        file_location = f"{UPLOAD_DIR}/{user.id}.jpg"
+        contents = await file.read()
+
+        with open(file_location, "wb") as f:
+            f.write(contents)
+
+        user.profile_image = file_location
+        db.commit()
+
+        return {"image_uri": f"/{file_location}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/me")
+def update_user_profile(
+    data: dict,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    if "name" in data:
+        user.name = data["name"]
+
+    db.commit()
+    db.refresh(user)
+
+    return {"status": "updated"}
