@@ -108,7 +108,7 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     const interval = setInterval(() => {
       loadTrend(viewMode);
-    }, 10000); //every 5s
+    }, 30000); //every 5s
 
     return () => clearInterval(interval);
   }, [viewMode]);

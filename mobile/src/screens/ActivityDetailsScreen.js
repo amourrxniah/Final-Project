@@ -4,18 +4,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Share
+  Share,
 } from "react-native";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 
-import { 
-  addFavourite, 
-  removeFavourite, 
+import {
+  addFavourite,
+  removeFavourite,
   getFavouriteState,
   sendActivityFeedback,
   getActivityFeedback,
-  logActivityOpen
+  logActivityOpen,
 } from "../components/api";
 
 import { useFavouriteAnimation } from "../components/useFavouriteAnimation";
@@ -108,7 +108,16 @@ export default function ActivityDetailsScreen({ route, navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadUserState();
+      let isActive = true;
+      const load = async () => {
+        if (!isActive) return;
+        await loadUserState();
+      };
+
+      load();
+      return () => {
+        isActive = false;
+      };
     }, [activity.id]),
   );
 
@@ -157,13 +166,12 @@ export default function ActivityDetailsScreen({ route, navigation }) {
   /* ---------- RATING ---------- */
   const setStars = async (value) => {
     const previous = rating;
-
     setRating(value);
 
     try {
       await sendActivityFeedback({
         activityId: activity.id,
-        rating: value
+        rating: value,
       });
     } catch (err) {
       console.log("Rating save failed", err?.data || err.message);
@@ -180,7 +188,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
     try {
       await sendActivityFeedback({
         activityId: activity.id,
-        feedback: newValue
+        feedback: newValue,
       });
     } catch (err) {
       console.log("Helpful save error", err);
@@ -200,75 +208,24 @@ export default function ActivityDetailsScreen({ route, navigation }) {
     }
   };
 
-  useEffect(() => {
-    loadRating();
-    checkFavourite();
-  }, []);
-
-  const loadRating = async () => {
-    const saved = await AsyncStorage.getItem(`rating_${activity.id}`);
-    if (saved) setRating(Number(saved));
-  };
-
-  const checkFavourite = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-
-      const res = await axios.get(`${BACKEND_URL}/favourites/${activity.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setIsFav(res.data?.is_favourite || false);
-    } catch (err) {
-      console.log("Check favourite error", err);
-    }
-  }; 
-
-  /* ---------- LOAD SAVED FEEDBACK ---------- */
-  useEffect(() => {
-    loadFeedback();
-  }, []);
-
-  const loadFeedback = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-
-      const res = await axios.get(`${BACKEND_URL}/feedback/${activity.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.data.rating) {
-        setRating(res.data.rating);
-      }
-
-      if (res.data.type) {
-        setHelpfulState(res.data.type);
-      }
-    } catch (err) {
-      console.log("Load feedback error", err);
-    }
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-
         {/* HEADER */}
-        <ActivityHeader 
+        <ActivityHeader
           navigation={navigation}
           isFav={isFav}
           toggleFavourite={toggleFavourite}
           handleShare={handleShare}
           heartRef={heartRef}
         />
-        
+
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
-
           {/* HERO CARD + DETAILS */}
-          <ActivityHero 
+          <ActivityHero
             activity={activity}
             hero={hero}
             meta={meta}
@@ -283,16 +240,16 @@ export default function ActivityDetailsScreen({ route, navigation }) {
             <Text style={styles.bodyText}>{why}</Text>
           </ActivityInfoCard>
 
-          <ActivityInfoCard 
-            icon="heart-circle" 
-            color="#e91e63" 
+          <ActivityInfoCard
+            icon="heart-circle"
+            color="#e91e63"
             title="Benefits"
           >
             {benefits.map((b) => (
-                <Text key={b} style={styles.bullet}>
-                  ✔ {b}
-                </Text>
-              ))}
+              <Text key={b} style={styles.bullet}>
+                ✔ {b}
+              </Text>
+            ))}
           </ActivityInfoCard>
 
           {/* TIPS */}
@@ -308,7 +265,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
             ))}
           </ActivityInfoCard>
 
-          <ActivitySimilar 
+          <ActivitySimilar
             similar={similar}
             navigation={navigation}
             allActivities={allActivities}
@@ -316,13 +273,12 @@ export default function ActivityDetailsScreen({ route, navigation }) {
             weather={weather}
           />
 
-          <ActivityRating 
+          <ActivityRating
             rating={rating}
             setStars={setStars}
             helpfulState={helpfulState}
             handleHelpful={handleHelpful}
           />
-
         </ScrollView>
       </View>
 
@@ -347,7 +303,6 @@ export default function ActivityDetailsScreen({ route, navigation }) {
               setIsFav(false);
               setUndoItem(null);
               await removeFavourite(undoItem.id);
-              
             }}
           >
             <Text style={styles.undoBtn}>Undo</Text>
@@ -365,14 +320,11 @@ export default function ActivityDetailsScreen({ route, navigation }) {
   );
 }
 
-
 const formatDistance = (d) => {
   if (d == null) return "Distance unknown";
   if (d < 1000) return `${Math.round(d)} m away`;
   return `${(d / 1000).toFixed(1)} km away`;
 };
-
-
 
 const styles = StyleSheet.create({
   container: {
