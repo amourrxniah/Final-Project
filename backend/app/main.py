@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base
 
 from app.models.user import User
@@ -16,12 +17,15 @@ from app.routers.auth import router as auth_router
 from app.routers.mood import router as mood_router
 from app.routers.activities import router as activities_router
 from app.routers.feedback import router as feedback_router
+from app.routers.achievements import router as achievements_router
 from dotenv import load_dotenv
 load_dotenv()
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="MoodSync API")
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,7 +45,9 @@ app.include_router(auth_router)
 app.include_router(mood_router)
 app.include_router(activities_router)
 app.include_router(feedback_router)
+app.include_router(achievements_router)
 
 @app.get("/")
 def health():
     return {"status": "ok"}
+
