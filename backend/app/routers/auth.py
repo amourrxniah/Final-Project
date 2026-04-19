@@ -67,6 +67,8 @@ async def manual_signup(data: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
+    await send_welcome_email(user.email, user.name)
+
     token = create_access_token({"user_id": user.id})
 
     return {"access_token": token}

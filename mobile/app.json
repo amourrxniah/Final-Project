@@ -46,6 +46,9 @@
       "expo-asset",
       "expo-web-browser",
       "@react-native-community/datetimepicker"
-    ]
+    ],
+    "extra": {
+      "redirectUri": "moodsync://auth"
+    }
   }
 }

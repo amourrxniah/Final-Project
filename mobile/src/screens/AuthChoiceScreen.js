@@ -6,13 +6,14 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Linking from "expo-linking";
 import { useEffect } from 'react';
+import Constants from "expo-constants";
 import { loginGoogle, loginApple } from '../components/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthChoiceScreen({ navigation }) {
 
-    const redirectUri = Linking.createURL("auth");
+    const redirectUri = Constants.expoConfig.extra.redirectUri;
 
     const [request, response, promptAsync] = Google.useAuthRequest({
         expoClientId: "229013008515-gso30jimda36hmk3aiv9paasrthp7ia7.apps.googleusercontent.com",
@@ -21,6 +22,7 @@ export default function AuthChoiceScreen({ navigation }) {
         webClientId: "229013008515-v06bu88dvtlpqfnet908lv8ithspgbmd.apps.googleusercontent.com",        
         redirectUri,
         scopes: ["profile", "email"],
+        useProxy: true,
     });
 
     useEffect(() => {
@@ -80,7 +82,7 @@ export default function AuthChoiceScreen({ navigation }) {
                     <TouchableOpacity 
                         style={styles.googleButton}
                         disabled={!request}
-                        onPress={() => promptAsync()}
+                        onPress={() => promptAsync({ useProxy: true })}
                     >
                         <MaterialCommunityIcons 
                             name="gmail" 
