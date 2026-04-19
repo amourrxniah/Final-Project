@@ -52,10 +52,12 @@ export default function BottomNav({
                 <NavIcon 
                     name="account-outline" 
                     color={iconColor("profile")}
+                    onPress={() => navigation.navigate("Profile")}
                 />
                 <NavIcon 
                     name="cog-outline" 
                     color={iconColor("settings")}
+                    onPress={() => navigation.navigate("Settings")}
                 />
             </View>       
         </View>

@@ -72,7 +72,7 @@ export const checkConsent = async () => {
     const userId = await getUserId();
 
     const res = await api.get(`/consent/me`, {
-        params: { user_id: userId }
+      params: { user_id: userId },
     });
 
     if (res.data?.accepted) {
@@ -92,8 +92,8 @@ export const acceptConsent = async () => {
   const deviceId = await getDeviceId();
 
   await api.post("/consent/accept", {
-      user_id: userId,
-      device_id: deviceId,
+    user_id: userId,
+    device_id: deviceId,
   });
 
   await AsyncStorage.setItem("userConsent", "true");
@@ -191,14 +191,13 @@ export const getMoodStats = async () => {
 
 /* -------------------- MOOD TREND -------------------- */
 export const getMoodTrend = async (mode) => {
-    try {
-      const res = await api.get(`/mood/trend?mode=${mode}`);
-      return res.data;
-    } catch (err) {
-        console.log("Trend API error:", err.response?.data || err.message);
-        return [];
-    }
-
+  try {
+    const res = await api.get(`/mood/trend?mode=${mode}`);
+    return res.data;
+  } catch (err) {
+    console.log("Trend API error:", err.response?.data || err.message);
+    return [];
+  }
 };
 
 /* -------------------- RECENT ACTIVITY -------------------- */
@@ -255,8 +254,8 @@ export const getUserActivities = async () => {
 /* -------------------- FAVOURITE ACTIVITY -------------------- */
 export const addFavourite = async (activityId) => {
   const res = await api.post("/favourites", {
-     activity_id: activityId
-});
+    activity_id: activityId,
+  });
 
   return res.data;
 };
@@ -275,26 +274,78 @@ export const removeFavourite = async (activityId) => {
 };
 /* -------------------- ACTIVITY FEEDBACK -------------------- */
 export const getActivityFeedback = async (activityId) => {
-    const res = await api.get(`/feedback/${activityId}`);
-    return res.data;
+  const res = await api.get(`/feedback/${activityId}`);
+  return res.data;
 };
 
 export const sendActivityFeedback = async ({
-    activityId,
-    rating,
-    feedback
+  activityId,
+  rating,
+  feedback,
 }) => {
-  const res = await api.post("/feedback", {
-      activity_id: activityId,
-      rating,
-      feedback
-    });
+  const res = await api.post("/feedback/", {
+    activity_id: activityId,
+    rating,
+    feedback,
+  });
 
   return res.data;
 };
 /* -------------------- LOG ACTIVITY OPEN -------------------- */
 export const logActivityOpen = async (activityId) => {
   const res = await api.post(`/activities/log/${activityId}`);
+  return res.data;
+};
+
+/* -------------------- SEARCH ACTIVITIES -------------------- */
+export const searchActivities = async (query) => {
+  if (!query) return [];
+
+  try {
+    const res = await api.get(`/activities/search?q=${query}`);
+    return res.data;
+  } catch (err) {
+    console.log("Search error:", err.response?.data || err.message);
+    return [];
+  }
+};
+
+/* -------------------- ACHIEVEMENTS -------------------- */
+export const getAchievements = async () => {
+  const res = await api.get("/achievements");
+  return res.data;
+};
+
+export const uploadProfileImg = async (image) => {
+  const formData = new FormData();
+
+  formData.append("file", {
+    uri: image.uri,
+    name: "profile.jpg",
+    type: "image/jpeg",
+  });
+
+  const res = await api.post("/users/upload-profile-img", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  return res.data.image_uri;
+};
+
+/* -------------------- PROFILE -------------------- */
+export const updateUserProfile = async (data) => {
+  const res = await api.put("/users/me", data);
+  return res.data;
+};
+
+/* -------------------- SETTINGS -------------------- */
+export const getSettings = async () => {
+  const res = await api.get("/users/settings");
+  return res.data;
+};
+
+export const saveSettings = async (settings) => {
+  const res = await api.put("/users/settings", settings);
   return res.data;
 };
 

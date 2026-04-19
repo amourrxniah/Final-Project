@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -82,3 +82,17 @@ def update_user_profile(
     db.refresh(user)
 
     return {"status": "updated"}
+
+@router.get("/settings")
+def get_settings(user = Depends(get_current_user)):
+    return user.settings or {}
+
+@router.put("/settings")
+def update_settings(
+    data: dict = Body(...),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    user.settings = data
+    db.commit()
+    return {"status": "saved"}
