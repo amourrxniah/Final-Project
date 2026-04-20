@@ -2,8 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import axios from "axios";
 
-//export const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev";
-
 export const BACKEND_URL = "https://final-project-8-q2v4.onrender.com";
 
 /* -------------------- AXIOS -------------------- */

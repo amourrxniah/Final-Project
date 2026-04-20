@@ -22,15 +22,29 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{
+          animation: "slide_from_right",
+          gestureEnabled: true,
+          headerShown: false,
+        }}
+      >
+        {/* auth screens */}
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="Privacy" component={PrivacyScreen} />
         <Stack.Screen name="AuthChoice" component={AuthChoiceScreen} />
         <Stack.Screen name="ManualLogin" component={ManualLoginScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="ManualSignup" component={ManualSignupScreen} />
+        
+        {/* main app screens */}
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="MoodInput" component={MoodInputScreen} />
+        <Stack.Screen name="MyActivities" component={MyActivitiesScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        
+        {/* other screens */}
         <Stack.Screen
           name="DetectedContext"
           component={DetectedContextScreen}
@@ -44,10 +58,7 @@ export default function App() {
           name="ActivityDetails"
           component={ActivityDetailsScreen}
         />
-        <Stack.Screen name="MyActivities" component={MyActivitiesScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Accounts" component={ConnectedAccountsScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -9,11 +9,16 @@ import {
   ActivityIndicator,
   ScrollView,
   Easing,
+  Image,
   useWindowDimensions,
+  Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import Svg, { Path, Circle, Line, Text as SvgText } from "react-native-svg";
 import ProductionChart from "../components/ProductionChart";
 import BottomNav from "../components/BottomNav";
@@ -24,6 +29,9 @@ import {
   getMoodStats,
   getMoodTrend,
   getRecentActivity,
+  uploadProfileImg,
+  updateUserProfile,
+  BACKEND_URL,
 } from "../components/api";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -32,11 +40,15 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 /* -------------------- HOME SCREEN -------------------- */
 export default function HomeScreen({ navigation }) {
   const [name, setName] = useState("User");
+  const [profileImage, setProfileImage] = useState(null);
   const [stats, setStats] = useState({
     total_syncs: 0,
     current_streak: 0,
     most_common_mood: null,
   });
+
+  const [editModalVisible, setEditModaVisible] = useState(false);
+  const [newName, setNewName] = useState("");
 
   const [trend, setTrend] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -48,6 +60,67 @@ export default function HomeScreen({ navigation }) {
 
   const [viewMode, setViewMode] = useState("live");
 
+  /* -------------------- PICK IMAGE-------------------- */
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission needed",
+        "Please grant permission to access your photos",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+
+    if (!result.canceled) {
+      const img = result.assets[0];
+
+      Alert.alert("Uploading", "Updating your profile picture...");
+
+      try {
+        const uploadedUrl = await uploadProfileImg(img);
+        const fullUrl = `${BACKEND_URL}${uploadedUrl}`;
+        setProfileImage(fullUrl);
+
+        await updateUserProfile({ profile_image: uploadedUrl });
+
+        Alert.alert("Success", "Profile picture updated!");
+      } catch (e) {
+        console.log("Upload error", e);
+        Alert.alert("Error", "Failed to update profile picture");
+      }
+    }
+  };
+
+  /* -------------------- EDIT NAME -------------------- */
+  const saveName = async () => {
+    if (!newName.trim()) {
+      Alert.alert("Error", "Name cannot be empty");
+      return;
+    }
+
+    try {
+      await updateUserProfile({ name: newName.trim() });
+      setName(newName.trim());
+      setEditModaVisible(false);
+      Alert.alert("Success", "Name updated successfully!");
+    } catch (e) {
+      console.log("Update name error", e);
+      Alert.alert("Error", "Failed to update name");
+    }
+  };
+
+  const openEditModal = () => {
+    setNewName(name);
+    setEditModaVisible(true);
+  };
+
   /* -------------------- LOAD CORE DATA -------------------- */
   const loadCore = async () => {
     try {
@@ -57,7 +130,17 @@ export default function HomeScreen({ navigation }) {
         getRecentActivity(),
       ]);
 
-      setName(user.username || "User");
+      setName(user.name || user.username || "User");
+
+      if (user.profile_image) {
+        const imageUrl = user.profile_image.startsWidth("http")
+          ? user.profile_image
+          : `${BACKEND_URL}${user.profile_image}`;
+        setProfileImage(imageUrl);
+      } else {
+        setProfileImage(null);
+      }
+
       setStats(statsData);
       setRecentActivity(activityData || []);
     } catch (err) {
@@ -109,7 +192,6 @@ export default function HomeScreen({ navigation }) {
     const interval = setInterval(() => {
       loadTrend(viewMode);
     }, 30000); //every 5s
-
     return () => clearInterval(interval);
   }, [viewMode]);
 
@@ -178,16 +260,39 @@ export default function HomeScreen({ navigation }) {
       >
         {/* HEADER */}
         <View style={styles.headerRow}>
-          <View style={styles.profileIcon}>
-            <MaterialCommunityIcons
-              name="account-outline"
-              size={50}
-              color="#fff"
-            />
-          </View>
+          <TouchableOpacity onPress={pickImage} style={styles.profileButton}>
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={styles.profileIcon}>
+                <MaterialCommunityIcons
+                  name="account-outline"
+                  size={50}
+                  color="#fff"
+                />
+              </View>
+            )}
+            <View style={styles.editIconOverlay}>
+              <MaterialCommunityIcons name="camera" size={20} color="#fff" />
+            </View>
+          </TouchableOpacity>
+
           <View>
             <Text style={styles.welcome}>Welcome Back</Text>
-            <Text style={styles.name}>{name}</Text>
+            <TouchableOpacity onPress={openEditModal}>
+              <View style={styles.nameRow}>
+                <Text style={styles.name}>{name}</Text>
+                <MaterialCommunityIcons
+                  name="pencil"
+                  size={18}
+                  color="#9b5de5"
+                  style={styles.editIcon}
+                />
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -321,6 +426,36 @@ export default function HomeScreen({ navigation }) {
         </View>
       </ScrollView>
       <AIAssistant />
+
+      {/* EDIT NAME MODAL */}
+      <Modal visible={editModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Name</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="Enter your name"
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setEditModaVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={saveName}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <BottomNav navigation={navigation} active="home" />
     </View>
@@ -571,6 +706,103 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
     marginTop: 15,
+  },
+
+  profileImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    marginTop: 15,
+  },
+
+  profileButton: {
+    position: "relative",
+  },
+
+  editIconOverlay: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#9b5de5",
+    borderRadius: 15,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: "#fff"
+  },
+
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+
+  editIcon: {
+    marginLeft: 4
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    width: "80%",
+    alignItems: "center"
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontweight: "600",
+    marginBottom: 20
+  },
+
+  modalInput: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20
+  },
+
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%"
+  },
+
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    marginHorizontal: 5,
+    alignItems: "center"
+  },
+
+  cancelButton: {
+    backgroundColor: "#f0f0f0"
+  },
+
+  saveButton: {
+    backgroundColor: "#9b5de5"
+  },
+
+  cancelButtonText: {
+    color: "#666",
+    fontweight: "600",
+  },
+
+  saveButtonText: {
+    color: "#000",
+    fontweight: "600",
   },
 
   welcome: {

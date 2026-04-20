@@ -5,7 +5,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 /* -------------------- CONSTANTS --------------------*/
 const SCREEN_HEIGHT = Dimensions.get("window").height;
-const BACKEND_URL = "https://hatable-dana-divertedly.ngrok-free.dev/chat/";
+
+const BACKEND_URL = "https://final-project-8-q2v4.onrender.com";
+const CHAT_ENDPOINT = "/chat";
 const CHAT_STORAGE_KEY = "moodsync_chat_history";
 
 const INTRO_TEXT =
@@ -103,13 +105,8 @@ export function useAIAssistant({ mood = "neutral" }) {
 
         setInput(""); 
         setMessages((prev => [...prev, userMsg])); 
-        const conversation = [...messages, userMsg];
 
-        console.log("Sending message to AI");
-        console.log("BACKEND_URL:", BACKEND_URL);
-        console.log("SESSION_ID:", SESSION_ID);
-        console.log("MOOD:", mood);
-        console.log("MESSAGES:", conversation);
+        const conversation = [...messages, userMsg];
         
         try {
             const res = await fetch(BACKEND_URL, {
