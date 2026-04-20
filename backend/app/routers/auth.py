@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -6,8 +7,18 @@ from app.services.email import send_welcome_email
 from app.services.security import hash_password, verify_password, create_access_token, SECRET_KEY, ALGORITHM
 from app.services.security import get_current_user as get_user
 from datetime import date
-from jose import jwt
 import requests
+
+class LoginRequest(BaseModel):
+    identifier: str
+    password: str
+
+class SignupRequest(BaseModel):
+    name: str
+    username: str
+    email: str
+    password: str
+    date_of_birth: str
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -32,7 +43,7 @@ def check_username(username: str, db: Session = Depends(get_db)):
     return {"available": not bool(exists)}
 
 @router.post("/signup")
-async def manual_signup(data: dict, db: Session = Depends(get_db)):
+async def manual_signup(data: SignupRequest, db: Session = Depends(get_db)):
     required = ["name", "username", "email", "password", "date_of_birth"]
     
     if not all(k in data for k in required):
@@ -79,7 +90,7 @@ def check_email(email: str, db: Session = Depends(get_db)):
     return {"available": not bool(exists)}
 
 @router.post("/login")
-async def manual_login(data: dict, db: Session = Depends(get_db)):
+async def manual_login(data: LoginRequest, db: Session = Depends(get_db)):
     identifier = data.get("identifier")
     password = data.get("password")
 
