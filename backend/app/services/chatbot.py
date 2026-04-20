@@ -1,10 +1,15 @@
 from datetime import datetime
 import requests
+import google.generativeai as genai
 
 from app.services.intent import detect_intent
 from app.database import SessionLocal
 from app.models.response import ChatResponse
-from app.config import OPENWEATHERMAP_API_KEY
+from app.config import OPENWEATHERMAP_API_KEY, GEMINI_API_KEY
+
+# configuring gemini
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 def get_time_of_day():
     hour = datetime.now().hour
@@ -77,15 +82,59 @@ def get_ai_response(messages, mood: str):
             if response:
                 return response.text
         
-        #generate new contextual response
-        reply = generate_human_fallback(mood)
+        #limit context
+        trimmed_msgs = messages[-8:]
 
-        #save it so it learned
+        #format chat for gemini
+        chat_history = ""
+        for m in trimmed_msgs:
+            role = "User" if m["role"] == "user" else "Assistant"
+            chat_history += f"{role}: {m['content']}\n"
+
+        tod = get_time_of_day()
+        weather = get_weather()
+
+        prompt = f"""
+You are MoodSync Assistant, a supportive and friendly AI.
+
+Context:
+- User mood: {mood}
+- Time of day: {tod}
+- Weather: {weather}
+
+Rules:
+- Be supportive and natural (not robotic)
+- Keep responses short (2-4 sentences)
+- Suggest helpful, realistic actions
+- Never sound clinical
+
+Conversation:
+{chat_history}
+
+Assistant:
+"""
+        #gemini call
+        response = model.generate_content(prompt)
+
+        # safe response
+        if not response or not response.text:
+            raise Exception("Empty Gemini response")
+        
+        reply = response.text.strip()
+
+        #save learning
         learned = ChatResponse(intent=intent, text=reply)
         db.add(learned)
         db.commit()
 
         return reply
+    
+    except Exception as e:
+        print("GEMINI ERROR:", e)
+
+        #fallback
+        return generate_human_fallback(mood)
+
         
     finally:
         db.close()

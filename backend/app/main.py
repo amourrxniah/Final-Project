@@ -21,7 +21,11 @@ from app.routers.achievements import router as achievements_router
 from dotenv import load_dotenv
 load_dotenv()
 
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print("DB init failed:", e)
+
 
 app = FastAPI(title="MoodSync API")
 
