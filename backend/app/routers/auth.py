@@ -67,11 +67,16 @@ async def manual_signup(data: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    await send_welcome_email(user.email, user.name)
+    # await send_welcome_email(user.email, user.name)
 
     token = create_access_token({"user_id": user.id})
 
     return {"access_token": token}
+
+@router.get("/check-email/{email}")
+def check_email(email: str, db: Session = Depends(get_db)):
+    exists = db.query(User).filter(User.email == email.lower()).first()
+    return {"available": not bool(exists)}
 
 @router.post("/login")
 async def manual_login(data: dict, db: Session = Depends(get_db)):
@@ -124,7 +129,12 @@ async def google_auth(data: dict, db: Session = Depends(get_db)):
         )
         db.add(user)
         db.commit()
-        await send_welcome_email(user.email, user.name)
+        db.refresh(user)
+
+        # try:
+        #     await send_welcome_email(user.email, user.name)
+        # except Exception as e:
+        #     print("Email failed:", e)
 
     token = create_access_token({"user_id": user.id})
     return {"access_token": token}
@@ -145,7 +155,7 @@ async def apple_auth(data: dict, db: Session = Depends(get_db)):
         )
         db.add(user)
         db.commit()
-        await send_welcome_email(user.email, user.name)
+        #await send_welcome_email(user.email, user.name)
 
     token = create_access_token({"user_id": user.id})
     return {"access_token": token}

@@ -8,9 +8,14 @@ router = APIRouter(prefix="/consent", tags=["Consent"])
 @router.get("/me")
 def check_consent(user_id: int, db: Session = Depends(get_db)):
     consent = get_consent(db, user_id)
+    
     if not consent:
-        raise HTTPException(status_code=404)
-    return consent
+        return {"accepted": False}
+    
+    return {
+        "accepted": True,
+        "data": consent
+    }
 
 @router.post("/accept")
 def accept_consent(data: dict, db: Session = Depends(get_db)):

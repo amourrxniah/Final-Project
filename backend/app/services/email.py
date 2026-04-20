@@ -1,9 +1,9 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 
 conf = ConnectionConfig(
-    MAIL_USERNAME="your@email.com",
-    MAIL_PASSWORD="EMAIL_APP_PASSWORD",
-    MAIL_FROM="MoodSync <your@email.com>",
+    MAIL_USERNAME="nraprice1@email.com",
+    MAIL_PASSWORD="jqwmrinlwsmdyeuw",
+    MAIL_FROM="nraprice1@email.com",
     MAIL_PORT=587,
     MAIL_SERVER="smtp.gmail.com",
     MAIL_STARTTLS=True,

@@ -163,6 +163,12 @@ export const checkUsernameAvailability = async (username) => {
   return res.data.available;
 };
 
+/* -------------------- EMAIL CHECK -------------------- */
+export const checkEmailAvailability = async (email) => {
+  const res = await api.get(`/auth/check-email/${email.toLowerCase()}`);
+  return res.data.available;
+};
+
 /* -------------------- MANUAL SIGNUP -------------------- */
 export const signupManual = async ({
   name,
