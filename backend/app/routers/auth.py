@@ -91,8 +91,8 @@ def check_email(email: str, db: Session = Depends(get_db)):
 
 @router.post("/login")
 async def manual_login(data: LoginRequest, db: Session = Depends(get_db)):
-    identifier = data.get("identifier")
-    password = data.get("password")
+    identifier = data.identifier
+    password = data.password
 
     if not identifier or not password:
         raise HTTPException(status_code=400, detail="Missing identifier or password")
