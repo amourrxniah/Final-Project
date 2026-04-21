@@ -17,14 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import SkeletonCard from "../components/SkeletonCard";
-import { useFavouriteAnimation } from "../components/useFavouriteAnimation";
-import {
-  getRecommendations,
-  getUserActivities,
-  addFavourite,
-  removeFavourite,
-  logActivityOpen,
-} from "../components/api";
+import { getRecommendations, logActivityOpen } from "../components/api";
 
 /* -------------------- CONFIG -------------------- */
 const ITEMS_PER_PAGE = 5;
@@ -38,7 +31,7 @@ if (
 
 /* -------------------- CATEGORY ICONS -------------------- */
 const CATEGORY_ICON_MAP = [
-  { match: ["museum", "gallery", "heritage", "arts_centre"], icon: "bank" },
+  { match: ["museum", "gallery", "arts_centre"], icon: "bank" },
   { match: ["cinema", "theatre", "entertainment"], icon: "movie-open" },
   { match: ["park", "nature"], icon: "tree" },
   { match: ["fitness", "sport", "gym"], icon: "dumbbell" },
@@ -102,13 +95,11 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [page, setPage] = useState(0);
   const [sortOpen, setSortOpen] = useState(false);
   const [sortMode, setSortMode] = useState("relevance");
-
   const [visibleCount, setVisibleCount] = useState(3);
 
   /* --------------- INITIAL LOAD --------------- */
   useEffect(() => {
     loadRecommendations();
-    loadUserState();
   }, []);
 
   useEffect(() => {
@@ -153,22 +144,6 @@ export default function RecommendationsScreen({ route, navigation }) {
     }
   };
 
-  /* -------------------- LOAD USER STATE --------------------*/
-  const loadUserState = async () => {
-    try {
-      const data = await getUserActivities();
-
-      data.forEach((a) => {
-        if (a.is_favourite) favMap[a.id] = true;
-        if (a.is_helpful) fbMap[a.id] = "up";
-        if (a.not_for_me) fbMap[a.id] = "down";
-      });
-
-    } catch (err) {
-      console.log("Failed loading stored preferences", err);
-    }
-  };
-
   /* --------------- OPEN ACTIVITY --------------- */
   const openActivity = async (activity, rank) => {
     try {
@@ -200,18 +175,6 @@ export default function RecommendationsScreen({ route, navigation }) {
   const currentItems = sortedActivities
     .slice(page * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE + ITEMS_PER_PAGE)
     .slice(0, visibleCount);
-
-  // <FlatList
-  //   data={sortedActivities}
-  //   keyExtractor={(item) => item.id.toString()}
-  //   renderItem={renderItem}
-  //   onEndReached={() => loadMore()}
-  //   onEndReachedThreshold={0.5}
-  // />;
-
-  const loadMore = () => {
-    setLimit((prev) => prev + 10);
-  };
 
   const changePage = (next) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -309,8 +272,6 @@ export default function RecommendationsScreen({ route, navigation }) {
               currentItems.map((item, index) => {
                 const rank = page * ITEMS_PER_PAGE + index + 1;
                 const tag = getTagFromCategories(item.category_names || []);
-                const state = feedback[item.id];
-
 
                 return (
                   <View key={item.id} style={styles.cardWrapper}>
@@ -324,21 +285,12 @@ export default function RecommendationsScreen({ route, navigation }) {
                         <Text style={styles.rankText}>{rank}</Text>
                       </View>
 
-                      {/* HEART */}
-                      <TouchableOpacity
-                        ref={(ref) => (heartRefs.current[item.id] = ref)}
-                        style={styles.heart}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          toggleFavourite(item);
-                        }}
-                      >
-                        <MaterialCommunityIcons
-                          name={favourites[item.id] ? "heart" : "heart-outline"}
-                          size={26}
-                          color={favourites[item.id] ? "#ff4fa3" : "#bbb"}
-                        />
-                      </TouchableOpacity>
+                      {/* ARROW */}
+                      <MaterialCommunityIcons 
+                        name="chevron-right"
+                        size={28}
+                        color="#6b5cff"
+                      />
 
                       <View style={styles.row}>
                         <View style={styles.iconCircle}>
