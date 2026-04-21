@@ -136,21 +136,16 @@ export default function RecommendationsScreen({ route, navigation }) {
 
       if (!Array.isArray(data)) return setLoading(false);
 
+      const mapped = data.map((item) => ({
+        ...item,
+        distanceNum: item.distance || 0,
+        distance: itemm.distance
+          ? (item.distance * 0.621371).toFixed(1)
+          : "N/A",
+      }));
+
       setActivities(mapped);
       setLoading(false);
-
-      requestAnimationFrame(() => {
-        Animated.stagger(
-          80,
-          animatedValues.current.map((val) =>
-            Animated.timing(val, {
-              toValue: 1,
-              duration: 400,
-              useNativeDriver: true,
-            }),
-          ),
-        ).start();
-      });
     } catch (err) {
       console.log("Recommendation load error:", err.message);
     } finally {
@@ -163,17 +158,12 @@ export default function RecommendationsScreen({ route, navigation }) {
     try {
       const data = await getUserActivities();
 
-      const favMap = {};
-      const fbMap = {};
-
       data.forEach((a) => {
         if (a.is_favourite) favMap[a.id] = true;
         if (a.is_helpful) fbMap[a.id] = "up";
         if (a.not_for_me) fbMap[a.id] = "down";
       });
 
-      setFavourites(favMap);
-      setFeedback(fbMap);
     } catch (err) {
       console.log("Failed loading stored preferences", err);
     }
@@ -321,18 +311,6 @@ export default function RecommendationsScreen({ route, navigation }) {
                 const tag = getTagFromCategories(item.category_names || []);
                 const state = feedback[item.id];
 
-                const animatedStyle = {
-                  opacity: animatedValues.current[index] || 1,
-                  transform: [
-                    {
-                      translateY:
-                        animatedValues.current[index]?.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [20, 0],
-                        }) || 0,
-                    },
-                  ],
-                };
 
                 return (
                   <View key={item.id} style={styles.cardWrapper}>

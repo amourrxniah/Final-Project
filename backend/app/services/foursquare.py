@@ -2,7 +2,7 @@ import requests
 import time
 from app.config import FOURSQUARE_API_KEY
 
-BASE_URL = "https://api.foursquare.com/places/search"
+BASE_URL = "https://api.foursquare.com/v3/places/search"
 
 # curated categories
 CATEGORY_IDS = [
@@ -29,9 +29,11 @@ def get_places(lat, lon, limit=30):
          "sort": "RELEVANCE"
     }
 
+    data = None
+
     for attempt in range(3):
         try:
-            res = requests.get(BASE_URL, headers=headers, params=params, timeout=10)
+            res = requests.get(BASE_URL, headers=headers, params=params, timeout=8)
 
             if res.status_code == 401:
                 print("FOURSQUARE 401 - check API key")
@@ -44,11 +46,9 @@ def get_places(lat, lon, limit=30):
         except requests.exceptions.Timeout:
             print(f"Foursquare timeout attempt {attempt+1}")
             time.sleep(1)
-
-        except Exception as e:
-            print(f"Foursquare error attempt {attempt+1}:", e)
-            if attempt == 2:
-                return []
+    
+    if not data:
+        return []
     
     results = data.get("results", [])
     places = []
