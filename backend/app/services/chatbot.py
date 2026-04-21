@@ -1,14 +1,10 @@
 from datetime import datetime
 import requests
-from google import genai
 
 from app.services.intent import detect_intent
 from app.database import SessionLocal
 from app.models.response import ChatResponse
-from app.config import OPENWEATHERMAP_API_KEY, GEMINI_API_KEY
-
-# configuring gemini
-client = genai.Client(api_key=GEMINI_API_KEY)
+from app.config import OPENWEATHERMAP_API_KEY
 
 def get_time_of_day():
     hour = datetime.now().hour
@@ -84,45 +80,8 @@ def get_ai_response(messages, mood: str):
         #limit context
         trimmed_msgs = messages[-8:]
 
-        #format chat for gemini
-        chat_history = ""
-        for m in trimmed_msgs:
-            role = "User" if m["role"] == "user" else "Assistant"
-            chat_history += f"{role}: {m['content']}\n"
-
-        tod = get_time_of_day()
-        weather = get_weather()
-
-        prompt = f"""
-You are MoodSync Assistant, a supportive and friendly AI.
-
-Context:
-- User mood: {mood}
-- Time of day: {tod}
-- Weather: {weather}
-
-Rules:
-- Be supportive and natural (not robotic)
-- Keep responses short (2-4 sentences)
-- Suggest helpful, realistic actions
-- Never sound clinical
-
-Conversation:
-{chat_history}
-
-Assistant:
-"""
-        #gemini call
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
-
-        if not response or not getattr(response, "text", None):
-            print("Gemini returned emty response")
-            return generate_human_fallback(mood)
-        
-        reply = response.text.strip() if response.text else ""
+        #simple fallback
+        reply = generate_human_fallback(mood)
 
         #save learning
         learned = ChatResponse(intent=intent, text=reply)
@@ -132,7 +91,7 @@ Assistant:
         return reply
     
     except Exception as e:
-        print("GEMINI ERROR:", e)
+        print("ERROR:", e)
 
         #fallback
         return generate_human_fallback(mood)
