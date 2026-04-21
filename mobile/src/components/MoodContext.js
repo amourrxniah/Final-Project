@@ -8,6 +8,7 @@ export function MoodProvider({ children }) {
     weather: null,
     context: null,
     timeOfDay: null,
+    location: null,
   });
 
   return (

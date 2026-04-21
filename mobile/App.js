@@ -1,23 +1,21 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
 import { MoodProvider } from "./src/components/MoodContext";
+
 import WelcomeScreen from "./src/screens/WelcomeScreen";
 import PrivacyScreen from "./src/screens/PrivacyScreen";
 import AuthChoiceScreen from "./src/screens/AuthChoiceScreen";
 import ManualLoginScreen from "./src/screens/ManualLoginScreen";
 import ForgotPasswordScreen from "./src/screens/ForgotPasswordScreen";
 import ManualSignupScreen from "./src/screens/ManualSignupScreen";
-import HomeScreen from "./src/screens/HomeScreen";
-import MoodInputScreen from "./src/screens/MoodInputScreen";
+
+import MainTabs from "./MainTabs";
+
 import DetectedContextScreen from "./src/screens/DetectedContextScreen";
 import OverviewScreen from "./src/screens/OverviewScreen";
-import RecommendationsScreen from "./src/screens/RecommendationsScreen";
 import ActivityDetailsScreen from "./src/screens/ActivityDetailsScreen";
-import MyActivitiesScreen from "./src/screens/MyActivitiesScreen";
-import ProfileScreen from "./src/screens/ProfileScreen";
-import SettingsScreen from "./src/screens/SettingsScreen";
 import ConnectedAccountsScreen from "./src/components/ConnectedAccountsScreen";
-import MainTabs from "./MainTabs";
 
 const Stack = createNativeStackNavigator();
 

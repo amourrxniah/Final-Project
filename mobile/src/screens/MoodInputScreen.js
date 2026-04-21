@@ -48,7 +48,9 @@ export default function MoodInputScreen({ navigation }) {
   /* ----- STATE ----- */
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const btnScale = useRef(new Animated.Value(1)).current;
+
   const { setMoodData } = useMood();
 
   /* ----- ANIMATIONS ----- */
@@ -78,6 +80,8 @@ export default function MoodInputScreen({ navigation }) {
   const handleContinue = async () => {
     if (!selected || loading) return;
 
+    setLoading(true);
+
     const timestamp = new Date().toISOString();
 
     try {
@@ -85,19 +89,14 @@ export default function MoodInputScreen({ navigation }) {
       await logMood(selected);
 
       // save to global context
-      setMoodData({
+      setMoodData((prev) => ({
+        ...prev,
         mood: selected,
         moodTime: timestamp,
-        weather: null,
-        context: null,
-        timeOfDay: null,
-      });
+      }));
 
       // navigate forward
-      navigation.navigate("DetectedContext", {
-        mood: selected,
-        moodTime: timestamp,
-      });
+      navigation.navigate("DetectedContext");
     } catch (err) {
       console.log("Mood save failed", err.response?.data || err.message);
     } finally {

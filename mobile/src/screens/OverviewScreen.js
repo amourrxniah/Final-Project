@@ -8,19 +8,21 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
-import { useRoute } from "@react-navigation/native";
+import { useMood } from "../components/MoodContext";
 
 /* HELPERS */
-const capitalize = (str) => {
-  if (!str) return "";
-  return str.charAt(0).toUpperCase() + str.slice(1);
+const capitalize = (value) => {
+  if (!value || typeof value !== "string") return "";
+  return value.charAt(0).toUpperCase() + value.slice(1);
 };
 
-const formatTime = (iso) =>
-  new Date(iso).toLocaleTimeString([], {
+const formatTime = (iso) => {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
+};
 
 /* CONFIG MAPS */
 const moodConfig = (mood) => {
@@ -68,12 +70,17 @@ const getWeatherIcon = (condition) => {
 };
 
 export default function OverviewScreen({ navigation }) {
-  const route = useRoute();
+  const { moodData } = useMood();
+  const { mood, moodTime, timeOfDay, weather } = moodData || {};
 
-  const mood = route?.params?.mood ?? null;
-  const moodTime = route?.params?.moodTime ?? new Date().toISOString();
-  const timeOfDay = (route?.params?.timeOfDay ?? "evening").toLowerCase();
-  const weather = route?.params?.weather ?? null;
+  // safety
+  if (!mood) {
+    return (
+      <View style={styles.center}>
+        <Text>Missing mood data...</Text>
+      </View>
+    );
+  }
 
   const { label, icon, color, bg } = moodConfig(mood);
   const weatherIcon = getWeatherIcon(weather?.condition);
@@ -215,8 +222,8 @@ export default function OverviewScreen({ navigation }) {
           <View style={styles.explainerCard}>
             <Text style={styles.explainer}>
               Based on your {label.toLowerCase()} mood and current{" "}
-              {timeOfDay.toLowerCase()} conditions, we've found 4 activities
-              that match you perfectly.
+              {(timeOfDay || "unknown").toLowerCase()} conditions, we've found
+              activities that match you perfectly.
             </Text>
 
             <Text style={styles.explainerSub}>
@@ -233,12 +240,6 @@ export default function OverviewScreen({ navigation }) {
           onPress={() =>
             navigation.navigate("MainTabs", {
               screen: "Recommendations",
-              params: {
-                mood,
-                moodTime,
-                weather,
-                timeOfDay,
-              },
             })
           }
         >
@@ -414,5 +415,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 19,
+  },
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

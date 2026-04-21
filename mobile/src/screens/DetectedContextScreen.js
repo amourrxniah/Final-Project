@@ -12,7 +12,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
-import { useRoute } from "@react-navigation/native";
 import { getContext } from "../components/api";
 import { useMood } from "../components/MoodContext";
 
@@ -23,10 +22,8 @@ const capitalize = (str) => {
 };
 
 export default function DetectedContextScreen({ navigation }) {
-  const route = useRoute();
+  const { moodData, setMoodData } = useMood();
 
-  const [mood, setMood] = useState(null);
-  const [moodTime, setMoodTime] = useState(null);
   const [timeOfDay, setTimeOfDay] = useState("");
   const [weather, setWeather] = useState(null);
 
@@ -34,13 +31,9 @@ export default function DetectedContextScreen({ navigation }) {
   const [error, setError] = useState(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const { moodData, setMoodData } = useMood();
 
   /* -------------------- INIT -------------------- */
   useEffect(() => {
-    setMood(route?.params?.mood ?? null);
-    setMoodTime(route?.params?.moodTime ?? new Date().toISOString());
-
     detectTime();
     detectContext();
   }, []);
@@ -49,10 +42,10 @@ export default function DetectedContextScreen({ navigation }) {
   const detectTime = () => {
     const hour = new Date().getHours();
 
-    if (hour >= 5 && hour < 11) return setTimeOfDay("morning");
-    if (hour < 16) return setTimeOfDay("afternoon");
-    if (hour < 21) return setTimeOfDay("evening");
-    setTimeOfDay("night");
+    if (hour >= 5 && hour < 11) return "morning";
+    if (hour < 16) return "afternoon";
+    if (hour < 21) return "evening";
+    return "night";
   };
 
   /* -------------------- CONTEXT -------------------- */
@@ -61,21 +54,36 @@ export default function DetectedContextScreen({ navigation }) {
     setError(null);
 
     try {
+      // location permission
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         throw new Error("Location permission denied");
       }
 
+      // get location
       const location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
 
+      // api call
       const data = await getContext(latitude, longitude);
 
       if (!data?.weather) {
         throw new Error("Weather unavailable");
       }
 
+      const detectedTime = detectTime();
+
+      // save locally
       setWeather(data.weather);
+      setTimeOfDay(detectedTime);
+
+      // save globally
+      setMoodData((prev) => ({
+        ...prev,
+        timeOfDay: detectedTime,
+        weather: data.weather,
+      }));
+
       // smooth fade in
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -86,7 +94,7 @@ export default function DetectedContextScreen({ navigation }) {
       console.log("Context detection failed:", err.message);
       setError(err.message);
     } finally {
-      setTimeout(() => setLoading(false), 600);
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -236,16 +244,7 @@ export default function DetectedContextScreen({ navigation }) {
       </View>
 
       {/* CONTINUE BUTTON */}
-      <TouchableOpacity
-        onPress={() =>
-          navigation.navigate("Overview", {
-            mood,
-            moodTime,
-            timeOfDay,
-            weather,
-          })
-        }
-      >
+      <TouchableOpacity onPress={() => navigation.navigate("Overview")}>
         <LinearGradient
           colors={["#b36bff", "#ff4fa3"]}
           start={{ x: 0, y: 0 }}
