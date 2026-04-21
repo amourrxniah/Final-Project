@@ -2,7 +2,7 @@ import requests
 import time
 from app.config import FOURSQUARE_API_KEY
 
-BASE_URL = "https://api.foursquare.com/v3/places/search"
+BASE_URL = "https://api.foursquare.com/places/search"
 
 # curated categories
 CATEGORY_IDS = [
@@ -52,7 +52,7 @@ def get_places(lat, lon, limit=30):
     
     results = data.get("results", [])
     places = []
-    
+
     for p in results:
         try:
             geocode = p.get("geocodes", {}).get("main", {})
