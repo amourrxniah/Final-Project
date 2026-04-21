@@ -1,8 +1,12 @@
-import { 
-    View, Text, StyleSheet, TouchableOpacity, 
-    ActivityIndicator 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Animated,
 } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import * as Location from "expo-location";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -11,340 +15,344 @@ import AIAssistant from "../components/AIAssistant/AIAssistant";
 import { useRoute } from "@react-navigation/native";
 import { getContext } from "../components/api";
 
+/* -------------------- HELPERS -------------------- */
 const capitalize = (str) => {
-    if (!str) return "";
-    return str.charAt(0).toUpperCase() + str.slice(1);
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
 export default function DetectedContextScreen({ navigation }) {
-    const route = useRoute();
+  const route = useRoute();
 
-    const [mood, setMood] = useState(null);
-    const [moodTime, setMoodTime] = useState(null);
-    const [timeOfDay, setTimeOfDay] = useState("");
-    const [weather, setWeather] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [mood, setMood] = useState(null);
+  const [moodTime, setMoodTime] = useState(null);
+  const [timeOfDay, setTimeOfDay] = useState("");
+  const [weather, setWeather] = useState(null);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        setMood(route?.params?.mood ?? null);
-        setMoodTime(route?.params?.moodTime ?? new Date().toISOString());
-        
-        detectTime();
-        detectContext();
-    }, []);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    /* TIME OF DAY */
-    const detectTime = () => {
-        const hour = new Date().getHours();
+  /* -------------------- INIT -------------------- */
+  useEffect(() => {
+    setMood(route?.params?.mood ?? null);
+    setMoodTime(route?.params?.moodTime ?? new Date().toISOString());
 
-        if (hour >= 5 && hour < 11) {
-            setTimeOfDay("morning");
-        } else if (hour >= 11 && hour < 16) {
-            setTimeOfDay("afternoon");
-        } else if (hour >= 16 && hour < 21) {
-            setTimeOfDay("evening");
-        } else {
-            setTimeOfDay("night");
-        }
-    };
+    detectTime();
+    detectContext();
+  }, []);
 
-    /* LOCATION + WEATHER */
-    const detectContext = async () => {
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== "granted") return;
+  /* -------------------- TIME -------------------- */
+  const detectTime = () => {
+    const hour = new Date().getHours();
 
-            const location = await Location.getCurrentPositionAsync({});
-            const { latitude, longitude } = location.coords;
+    if (hour >= 5 && hour < 11) return setTimeOfDay("morning");
+    if (hour < 16) return setTimeOfDay("afternoon");
+    if (hour < 21) return setTimeOfDay("evening");
+    setTimeOfDay("night");
+  };
 
-            const data = await getContext(latitude, longitude);
-            setWeather(data.weather);
-        } catch (err) {
-            console.log("Context detection failed:", err.message)
-;        } finally {
-            setTimeout(() => setLoading(false), 600);
-        }
-    };
+  /* -------------------- CONTEXT -------------------- */
+  const detectContext = async () => {
+    setLoading(true);
+    setError(null);
 
-    if (loading) {
-        return (
-            <View style={styles.loader}>
-                <ActivityIndicator size="large" color="#b36bff" />
-                <Text style={styles.loaderText}>
-                    Detecting your context...
-                </Text>
-            </View>
-        );
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        throw new Error("Location permission denied");
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+
+      const data = await getContext(latitude, longitude);
+
+      if (!data?.weather) {
+        throw new Error("Weather unavailable");
+      }
+
+      setWeather(data.weather);
+      // smooth fade in
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    } catch (err) {
+      console.log("Context detection failed:", err.message);
+      setError(err.message);
+    } finally {
+      setTimeout(() => setLoading(false), 600);
     }
+  };
 
-    const getTimeConfig = () => {
-        switch (timeOfDay) {
-            case "morning":
-                return {
-                    icon: "weather-sunset-up",
-                    colors: ["#ffe29f", "#ffa99f"]
-                };
-            case "afternoon":
-                return {
-                    icon: "weather-sunny",
-                    colors: ["#ffd194", "#ff6a88"]
-                };
-            case "evening":
-                return {
-                    icon: "weather-sunset-down",
-                    colors: ["#667eea", "#764ba2"]
-                };
-            case "night":
-                return {
-                    icon: "weather-night",
-                    colors: ["#0f2027", "#203a43"]
-                };
-            default:
-                return {
-                    icon: "clock-outline",
-                    colors: ["#b993d6", "#8ca6db"]
-                };
-        }
-    }
-
-    const getWeatherConfig = () => {
-        if (!weather || !weather.condition) return null; 
-
-        const condition = weather.condition.toLowerCase();
-
-        if (condition.includes("rain")) {
-            return {
-                icon: "weather-rainy",
-                colors: ["#897f7e", "#66a6ff"]
-            };
-        }
-
-        if (condition.includes("cloud")) {
-            return {
-                icon: "weather-cloudy",
-                colors: ["#d7d2cc", "#304352"]
-            };
-        }
-
-        if (condition.includes("sun") || condition.includes("clear")) {
-            return {
-                icon: "weather-sunny",
-                colors: ["#fee140", "#fa709a"]
-            };
-        }
-
-        return {
-            icon: "weather-partly-cloudy",
-            colors: ["#e0c3fc", "#8ec5fc"]
-            };
-    }
-
-    const timeConfig = getTimeConfig();
-    const weatherConfig = getWeatherConfig();
-
-    const aiContext = {
-        timeOfDay,
-        weather: weather
-            ? `${weather.condition}, ${weather.temperature}°C`
-            : "unknown"
-    };
-
+  if (loading) {
     return (
-        <View style={styles.container}>
-
-            {/* HEADER */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.back}
-                >
-                    <MaterialCommunityIcons name="arrow-left" size={30}></MaterialCommunityIcons>
-                </TouchableOpacity>
-
-                <View style={styles.headerCenter}>
-                    <MaskedView
-                        maskElement={<Text style={styles.title}>Detected Context</Text>}
-                    >
-                        <LinearGradient
-                            colors={["#b36bff", "#ff4fa3"]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                        >
-                            <Text style={[styles.title, { opacity: 0 }]}>
-                                Detected Context
-                            </Text>
-                        </LinearGradient>
-                    </MaskedView>
-
-                    <Text style={styles.subtitle}>
-                        We found your current setting details
-                    </Text>
-                </View>
-            </View>
-
-            {/* CONTEXT CARDS */}
-            <View style={styles.cardsContainer}>
-
-                {/* TIME OF DAY */}
-                <LinearGradient
-                    colors={timeConfig.colors}
-                    style={styles.gradientCard}
-                >
-                    <MaterialCommunityIcons 
-                        name={timeConfig.icon} 
-                        size={60} 
-                        color="#fff" 
-                    />
-                    <View>
-                        <Text style={styles.cardLabel}>Time of Day</Text>
-                        <Text style={styles.cardValue}>{capitalize(timeOfDay)}</Text>
-                    </View>
-                </LinearGradient>
-
-                {/* WEATHER*/}
-                {weatherConfig && (
-                    <LinearGradient
-                        colors={weatherConfig.colors}
-                        style={styles.gradientCard}
-                    >
-                        <MaterialCommunityIcons 
-                            name={weatherConfig.icon}
-                            size={60} 
-                            color="#fff" 
-                        />
-                        <View>
-                            <Text style={styles.cardLabel}>Weather</Text>
-                            <Text style={styles.cardValue}>
-                                {capitalize(weather.condition)} • {weather.temperature}°C
-                            </Text>
-                        </View>
-                    </LinearGradient>
-                )}
-            </View>
- 
-            {/* CONTINUE BUTTON */}
-            <TouchableOpacity
-                onPress={() => navigation.navigate("Overview", {
-                    mood: mood,
-                    moodTime: moodTime,
-                    timeOfDay,
-                    weather: weather
-                        ? {
-                            condition: weather.condition,
-                            temperature: weather.temperature
-                        }
-                        : null
-                })}
-            >
-                <LinearGradient
-                    colors={["#b36bff", "#ff4fa3"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.continueBtn}
-                >
-                    <Text style={styles.continueText}>
-                        Get activity recommendations
-                    </Text>
-                </LinearGradient>
-            </TouchableOpacity>
-
-            {/* AI ASSISTANT */}
-            <AIAssistant
-                mood="context"
-                context={aiContext}
-            />
-        </View>
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#b36bff" />
+        <Text style={styles.loaderText}>Detecting your context...</Text>
+      </View>
     );
+  }
+
+  /* -------------------- CONFIG -------------------- */
+  const getTimeConfig = () => {
+    const map = {
+      morning: {
+        icon: "weather-sunset-up",
+        colors: ["#ffe29f", "#ffa99f"],
+      },
+      afternoon: {
+        icon: "weather-sunny",
+        colors: ["#ffd194", "#ff6a88"],
+      },
+      evening: {
+        icon: "weather-sunset-down",
+        colors: ["#667eea", "#764ba2"],
+      },
+      night: {
+        icon: "weather-night",
+        colors: ["#0f2027", "#203a43"],
+      },
+    };
+    return map[timeOfDay] || map.morning;
+  };
+
+  const getWeatherConfig = () => {
+    if (!weather || !weather.condition) return null;
+
+    const condition = weather.condition.toLowerCase();
+
+    if (condition.includes("rain")) {
+      return {
+        icon: "weather-rainy",
+        colors: ["#4e54c8", "#8f94fb"],
+      };
+    }
+
+    if (condition.includes("cloud")) {
+      return {
+        icon: "weather-cloudy",
+        colors: ["#bdc3c7", "#2c3e50"],
+      };
+    }
+
+    if (condition.includes("sun") || condition.includes("clear")) {
+      return {
+        icon: "weather-sunny",
+        colors: ["#f6d365", "#fda085"],
+      };
+    }
+
+    return {
+      icon: "weather-partly-cloudy",
+      colors: ["#a1c4fd", "#c2e9fb"],
+    };
+  };
+
+  const timeConfig = getTimeConfig();
+  const weatherConfig = getWeatherConfig();
+
+  const aiContext = {
+    timeOfDay,
+    weather: weather
+      ? `${weather.condition}, ${weather.temperature}°C`
+      : "unknown",
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.back}
+        >
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={30}
+          ></MaterialCommunityIcons>
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <MaskedView
+            maskElement={<Text style={styles.title}>Detected Context</Text>}
+          >
+            <LinearGradient
+              colors={["#b36bff", "#ff4fa3"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={[styles.title, { opacity: 0 }]}>
+                Detected Context
+              </Text>
+            </LinearGradient>
+          </MaskedView>
+
+          <Text style={styles.subtitle}>
+            We found your current setting details
+          </Text>
+        </View>
+      </View>
+
+      {/* CONTEXT CARDS */}
+      <View style={styles.cardsContainer}>
+        {/* TIME OF DAY */}
+        <LinearGradient colors={timeConfig.colors} style={styles.gradientCard}>
+          <MaterialCommunityIcons
+            name={timeConfig.icon}
+            size={60}
+            color="#fff"
+          />
+          <View>
+            <Text style={styles.cardLabel}>Time of Day</Text>
+            <Text style={styles.cardValue}>{capitalize(timeOfDay)}</Text>
+          </View>
+        </LinearGradient>
+
+        {/* WEATHER*/}
+        {weatherConfig && (
+          <LinearGradient
+            colors={weatherConfig.colors}
+            style={styles.gradientCard}
+          >
+            <MaterialCommunityIcons
+              name={weatherConfig.icon}
+              size={60}
+              color="#fff"
+            />
+            <View>
+              <Text style={styles.cardLabel}>Weather</Text>
+              <Text style={styles.cardValue}>
+                {capitalize(weather.condition)} • {weather.temperature}°C
+              </Text>
+            </View>
+          </LinearGradient>
+        )}
+      </View>
+
+      {/* CONTINUE BUTTON */}
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate("Overview", {
+            mood: mood,
+            moodTime: moodTime,
+            timeOfDay,
+            weather: weather
+              ? {
+                  condition: weather.condition,
+                  temperature: weather.temperature,
+                  timeOfDay,
+                }
+              : null,
+          })
+        }
+      >
+        <LinearGradient
+          colors={["#b36bff", "#ff4fa3"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.continueBtn}
+        >
+          <Text style={styles.continueText}>Get activity recommendations</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* AI ASSISTANT */}
+      <AIAssistant mood="context" context={aiContext} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 24,
-        backgroundColor: "#f0f8ff"
-    },
+  container: {
+    flex: 1,
+    padding: 24,
+    backgroundColor: "#e9eef6",
+  },
 
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 60,
-        marginBottom: 20
-    },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 60,
+    marginBottom: 20,
+  },
 
-    back: {
-        width: 40
-    },
-    
-    headerCenter: {
-        flex: 1,
-        alignItems: "center",
-        marginRight: 10
-    },
+  back: {
+    width: 40,
+  },
 
-    title: {
-        fontSize: 30,
-        fontWeight: "700",
-        marginTop: 6
-    },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    marginRight: 10,
+  },
 
-    subtitle: {
-        fontSize: 17,
-        color: "#666",
-        marginTop: 6,
-        marginRight: 10
-    },
-    
-    loader: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center"
-    },
+  title: {
+    fontSize: 30,
+    fontWeight: "700",
+    marginTop: 6,
+  },
 
-    loaderText: {
-        marginTop: 12,
-        fontSize: 16,
-        color: "#555"
-    },
+  subtitle: {
+    fontSize: 17,
+    color: "#666",
+    marginTop: 6,
+    marginRight: 10,
+  },
 
-    cardsContainer: {
-        marginTop: 40,
-        marginBottom: 40
-    },
+  loader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-    gradientCard: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 24,
-        paddingHorizontal: 30,
-        paddingVertical: 38,
-        minHeight: 150,
-        borderRadius: 26,
-        marginBottom: 22
-    },
+  loaderText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#555",
+  },
 
-    cardLabel: {
-        fontSize: 26,
-        color: "rgba(255,255,255,0.85)"
-    },
+  cardsContainer: {
+    marginTop: 40,
+    marginBottom: 40,
+  },
 
-    cardValue: {
-        fontSize: 22,
-        fontWeight: "700",
-        color: "#fff",
-        marginTop: 4
-    },
+  gradientCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 24,
+    paddingHorizontal: 30,
+    paddingVertical: 38,
+    minHeight: 150,
+    borderRadius: 26,
+    marginBottom: 22,
+  },
 
-    continueBtn: { 
-        paddingVertical: 14,
-        borderRadius: 18,
-        alignItems: "center",
-        marginTop: 90
-    },
+  cardLabel: {
+    fontSize: 26,
+    color: "rgba(255,255,255,0.85)",
+  },
 
-    continueText: {
-        color: "#fff",
-        fontWeight: "600",
-        fontSize: 19
-    }
-})
+  cardValue: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#fff",
+    marginTop: 4,
+  },
+
+  continueBtn: {
+    paddingVertical: 14,
+    borderRadius: 18,
+    alignItems: "center",
+    marginTop: 90,
+  },
+
+  continueText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 19,
+  },
+});

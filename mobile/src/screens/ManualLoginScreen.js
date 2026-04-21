@@ -31,7 +31,7 @@ export default function ManualLoginScreen({ navigation }) {
       //save token
       await loginManual(identifier, password);
 
-      navigation.replace("Home");
+      navigation.replace("MainTabs", { screen: "Home" });
     } catch (error) {
       console.log("Login error:", error.response?.data || error.message);
 
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 24,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   back: {

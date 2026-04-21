@@ -21,8 +21,8 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import Svg, { Path, Circle, Line, Text as SvgText } from "react-native-svg";
 import ProductionChart from "../components/ProductionChart";
-import BottomNav from "../components/BottomNav";
 import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import {
   getCurrentUser,
@@ -81,14 +81,17 @@ export default function HomeScreen({ navigation }) {
     if (!result.canceled) {
       const img = result.assets[0];
 
-      Alert.alert("Uploading", "Updating your profile picture...");
-
       try {
         const uploadedUrl = await uploadProfileImg(img);
         const fullUrl = `${BACKEND_URL}${uploadedUrl}`;
+
+        //update ui
         setProfileImage(fullUrl);
 
         await updateUserProfile({ profile_image: uploadedUrl });
+
+        //save locally
+        await AsyncStorage.setItem("profile_image", fullUrl);
 
         Alert.alert("Success", "Profile picture updated!");
       } catch (e) {
@@ -124,6 +127,11 @@ export default function HomeScreen({ navigation }) {
   /* -------------------- LOAD CORE DATA -------------------- */
   const loadCore = async () => {
     try {
+      const cachedImage = await AsyncStorage.getItem("profile_image");
+      if (cachedImage) {
+        setProfileImage(cachedImage);
+      }
+
       const [user, statsData, activityData] = await Promise.all([
         getCurrentUser(),
         getMoodStats(),
@@ -133,12 +141,13 @@ export default function HomeScreen({ navigation }) {
       setName(user.name || user.username || "User");
 
       if (user.profile_image) {
-        const imageUrl = user.profile_image.startsWidth("http")
+        const imageUrl = user.profile_image.startsWith("http")
           ? user.profile_image
           : `${BACKEND_URL}${user.profile_image}`;
+
         setProfileImage(imageUrl);
-      } else {
-        setProfileImage(null);
+
+        await AsyncStorage.setItem("profile_image", imageUrl);
       }
 
       setStats(statsData);
@@ -280,7 +289,7 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          <View>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.welcome}>Welcome Back</Text>
             <TouchableOpacity onPress={openEditModal}>
               <View style={styles.nameRow}>
@@ -456,8 +465,6 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-
-      <BottomNav navigation={navigation} active="home" />
     </View>
   );
 }
@@ -674,7 +681,7 @@ function SegmentedControl({ value, onChange }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   content: {
@@ -704,7 +711,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#c77dff",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 8,
     marginTop: 15,
   },
 
@@ -714,12 +721,16 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 8,
     marginTop: 15,
   },
 
   profileButton: {
     position: "relative",
+  },
+
+  headerTextContainer: {
+    marginLeft: 10,
   },
 
   editIconOverlay: {
@@ -730,23 +741,23 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 4,
     borderWidth: 2,
-    borderColor: "#fff"
+    borderColor: "#fff",
   },
 
   nameRow: {
     flexDirection: "row",
-    alignItems: "center"
+    alignItems: "center",
   },
 
   editIcon: {
-    marginLeft: 4
+    marginLeft: 4,
   },
 
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
-    alignItems: "center"
+    alignItems: "center",
   },
 
   modalContent: {
@@ -754,13 +765,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     width: "80%",
-    alignItems: "center"
+    alignItems: "center",
   },
 
   modalTitle: {
     fontSize: 20,
     fontweight: "600",
-    marginBottom: 20
+    marginBottom: 20,
   },
 
   modalInput: {
@@ -770,13 +781,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
-    marginBottom: 20
+    marginBottom: 20,
   },
 
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: "100%"
+    width: "100%",
   },
 
   modalButton: {
@@ -784,15 +795,15 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     marginHorizontal: 5,
-    alignItems: "center"
+    alignItems: "center",
   },
 
   cancelButton: {
-    backgroundColor: "#f0f0f0"
+    backgroundColor: "#f0f0f0",
   },
 
   saveButton: {
-    backgroundColor: "#9b5de5"
+    backgroundColor: "#9b5de5",
   },
 
   cancelButtonText: {

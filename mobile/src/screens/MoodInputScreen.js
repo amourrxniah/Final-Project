@@ -8,10 +8,10 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React, {useRef, useState } from "react";
+import React, { useRef, useState } from "react";
+import * as Haptics from "expo-haptics";
 import MaskedView from "@react-native-masked-view/masked-view";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
-import BottomNav from "../components/BottomNav";
 import { logMood } from "../components/api";
 
 /* -------------------- CONSTANTS --------------------*/
@@ -46,6 +46,8 @@ const moods = [
 export default function MoodInputScreen({ navigation }) {
   /* ----- STATE ----- */
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const btnScale = useRef(new Animated.Value(1)).current;
 
   /* ----- ANIMATIONS ----- */
   const liftAnim = useRef(
@@ -58,18 +60,23 @@ export default function MoodInputScreen({ navigation }) {
   const animateSelect = (key) => {
     setSelected(key);
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     Object.keys(liftAnim).forEach((k) => {
       Animated.spring(liftAnim[k], {
         toValue: k === key ? 1 : 0,
         useNativeDriver: true,
         friction: 6,
+        tension: 120,
       }).start();
     });
   };
 
   /* -------------------- CONTINUE --------------------*/
   const handleContinue = async () => {
-    if (!selected) return;
+    if (!selected || loading) return;
+
+    setLoading(true);
 
     try {
       await logMood(selected);
@@ -80,6 +87,8 @@ export default function MoodInputScreen({ navigation }) {
       });
     } catch (err) {
       console.log("Mood save failed", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -133,7 +142,13 @@ export default function MoodInputScreen({ navigation }) {
                   {
                     translateY: liftAnim[mood.key].interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0, -4],
+                      outputRange: [0, -6],
+                    }),
+                  },
+                  {
+                    scale: liftAnim[mood.key].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.03],
                     }),
                   },
                 ],
@@ -145,6 +160,10 @@ export default function MoodInputScreen({ navigation }) {
                   {
                     borderColor: active ? mood.color : "#ddd",
                     backgroundColor: active ? `${mood.color}25` : "#fff",
+                    shadowColor: active ? mood.color : "#000",
+                    shadowOpacity: active ? 0.25 : 0.05,
+                    shadowRadius: active ? 10 : 2,
+                    elevation: active ? 6 : 1,
                   },
                 ]}
                 onPress={() => animateSelect(mood.key)}
@@ -170,21 +189,40 @@ export default function MoodInputScreen({ navigation }) {
         })}
 
         {/* CONTINUE BUTTON */}
-        <TouchableOpacity disabled={!selected} onPress={handleContinue}>
-          <LinearGradient
-            colors={["#b36bff", "#ff4fa3"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.continueBtn, { opacity: selected ? 1 : 0.4 }]}
-          >
-            <Text style={styles.continueText}>Continue</Text>
-          </LinearGradient>
+        <TouchableOpacity
+          disabled={!selected || loading}
+          onPressIn={() => {
+            Animated.spring(btnScale, {
+              toValue: 0.96,
+              useNativeDriver: true,
+            }).start();
+          }}
+          onPressOut={() => {
+            Animated.spring(btnScale, {
+              toValue: 1,
+              useNativeDriver: true,
+            }).start();
+          }}
+          onPress={handleContinue}
+        >
+          <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+            <LinearGradient
+              colors={["#b36bff", "#ff4fa3"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[styles.continueBtn, { opacity: selected ? 1 : 0.4 }]}
+            >
+              <Text style={styles.continueText}>
+                {loading ? "Saving..." : "Continue"}
+              </Text>
+            </LinearGradient>
+          </Animated.View>
         </TouchableOpacity>
 
         {/* AI ASSISTANT */}
         <AIAssistant mood={selected ?? "neutral"} />
       </View>
-      <BottomNav navigation={navigation} active="mood" />
+      {/* <BottomNav navigation={navigation} active="mood" /> */}
     </View>
   );
 }
@@ -192,7 +230,7 @@ export default function MoodInputScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   content: {

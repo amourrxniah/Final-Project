@@ -16,6 +16,7 @@ import MyActivitiesScreen from "./src/screens/MyActivitiesScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import ConnectedAccountsScreen from "./src/components/ConnectedAccountsScreen";
+import MainTabs from "./MainTabs";
 
 const Stack = createNativeStackNavigator();
 
@@ -38,12 +39,8 @@ export default function App() {
         <Stack.Screen name="ManualSignup" component={ManualSignupScreen} />
         
         {/* main app screens */}
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="MoodInput" component={MoodInputScreen} />
-        <Stack.Screen name="MyActivities" component={MyActivitiesScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
-        
+        <Stack.Screen name="MainTabs" component={MainTabs} />
+
         {/* other screens */}
         <Stack.Screen
           name="DetectedContext"

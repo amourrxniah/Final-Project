@@ -32,13 +32,46 @@ export default function ProductionChart({ data, viewMode }) {
   const safeData = useMemo(() => {
     if (!Array.isArray(data)) return [];
 
-    return data.map((d) => {
-      const val = Number(d.value);
+    const cleaned = data.map((d) => ({
+      value: Math.max(0, Math.min(2, Number(d.value))),
+      label: d.time || d.day || "",
+      hasData: !!d.has_data,
+      timestamp: d.timestamp || 0,
+    }));
+
+    // find last real log index
+    const lastRealIndex = [...cleaned]
+      .map((d, i) => (d.hasData ? i : -1))
+      .filter((i) => i !== -1)
+      .pop();
+
+    let decayStep = 0;
+    const decayRate = 0.25; // smaller = slower return
+
+    return cleaned.map((d, i) => {
+      // before last real log
+      if (i <= lastRealIndex) {
+        return d.hasData ? d : { ...d, value: 1 };
+      }
+
+      // after last real log return to neutral
+      decayStep++;
+
+      const lastVal = cleaned[lastRealIndex]?.value ?? 1;
+
+      let val = lastVal;
+
+      if (lastVal < 1) {
+        val = Math.min(1, lastVal + decayStep * decayRate);
+      } else if (lastVal > 1) {
+        // coming down from high
+        val = Math.max(1, lastVal - decayStep * decayRate);
+      } else {
+        val = 1;
+      }
       return {
-        value: Number.isFinite(val) ? Math.max(0, Math.min(2, val)) : 1,
-        label: d.time || d.day || "",
-        hasData: !!d.has_data,
-        timestamp: d.timestamp || 0,
+        ...d,
+        value: val,
       };
     });
   }, [data]);
@@ -221,7 +254,6 @@ export default function ProductionChart({ data, viewMode }) {
         <TouchableOpacity onPress={zoomIn} style={styles.controlBtn}>
           <Text style={styles.controlText}>+</Text>
         </TouchableOpacity>
-        
       </View>
 
       <View style={styles.chartContainer}>
@@ -428,9 +460,9 @@ export default function ProductionChart({ data, viewMode }) {
 }
 
 const styles = StyleSheet.create({
-    chartContainer: {
-        position: "relative",
-    },
+  chartContainer: {
+    position: "relative",
+  },
   zoomControls: {
     position: "absolute",
     top: -11,
@@ -449,7 +481,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 2,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
 
   controlText: {
@@ -466,7 +498,7 @@ const styles = StyleSheet.create({
 
   tooltipWrapper: {
     alignItems: "center",
-    marginTop: 6
+    marginTop: 6,
   },
 
   tooltipCard: {

@@ -177,7 +177,7 @@ export default function ManualSignupScreen({ navigation }) {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      navigation.replace("Home");
+      navigation.replace("MainTabs", { screen: "Home" });
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 24,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   back: {
