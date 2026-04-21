@@ -6,7 +6,7 @@ import logging
 
 from app.database import get_db
 from app.models.activity import Activity
-from app.services.foursquare import get_places
+from app.services.geoapify import get_places
 from app.services.scoring import *
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ def recommendations(
         results = []
         seen_ids = set()
 
-        # ---------- DB FALLBACK ----------
+        # ---------- DB FIRST (LEARNING) ----------
         db_items = db.query(Activity).filter(
             func.abs(Activity.latitude - lat) <= 0.2,
             func.abs(Activity.longitude - lon) <= 0.2
@@ -69,19 +69,20 @@ def recommendations(
                 "category": activity.categories,
                 "category_names": activity.category_names or [],
                 "distance": round(dist, 2),
-                "rating": activity.rating,
-                "price": activity.price,
-                "popularity": activity.popularity,
                 "score": round(score, 3)
             })
 
             seen_ids.add(activity.id)
 
-        # --------------- FETCH FROM API ---------------
+        # --------------- FETCH FROM API (GEOAPIFY) ---------------
         api_places = get_places(lat, lon, 30)
 
         place_ids = [p["place_id"] for p in api_places if p.get("place_id")]
-        existing = db.query(Activity).filter(Activity.place_id.in_(place_ids)).all()
+
+        existing = db.query(Activity).filter(
+            Activity.place_id.in_(place_ids)
+        ).all()
+
         existing_map = {e.place_id: e for e in existing}
         
         # --------------- PROCESS API PLACES ---------------
@@ -90,10 +91,10 @@ def recommendations(
                 break
 
             pid = p.get("place_id")
-            if not pid or pid in seen_ids:
+            if not pid:
                 continue
 
-            categories = p.get("categories", [])
+            categories = p.get("categories")
             activity = existing_map.get(pid)
 
             if not activity:
@@ -106,12 +107,16 @@ def recommendations(
                 for k, v in p.items():
                     setattr(activity, k, v)
 
+                # distance
                 dist = p.get("distance")
                 if dist is None:
                     dist = distance_km(
-                        lat, lon, activity.latitude, activity.longitude
+                        lat, lon, 
+                        activity.latitude, 
+                        activity.longitude
                     )
 
+                # score
                 score = total_score(
                     mood_score(mood, categories, activity.rating, activity.popularity),
                     weather_score(weather, categories),
@@ -132,9 +137,6 @@ def recommendations(
                     "category": activity.categories,
                     "category_names": activity.category_names,
                     "distance": round(dist, 2),
-                    "rating": activity.rating,
-                    "price": activity.price,
-                    "popularity": activity.popularity,
                     "score": round(score, 3)
                 })
 
