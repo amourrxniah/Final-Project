@@ -121,7 +121,7 @@ def recommendations(
 
             # ---------- CREATE NEW (LEARNING) ----------
             if not activity:
-                activity = Activity(**p)
+                activity = Activity(**clean_data)
                 db.add(activity)
                 db.flush()
                 db.refresh(activity)
