@@ -94,7 +94,10 @@ def recommendations(
 
         # simulate user behaviour
         recent_ids = set()
-        user_prefs = engine.get_user_prefs().get("categories", {})
+        try:
+            user_prefs = engine.get_user_prefs().get("categories", {})
+        except Exception:
+            user_prefs = {}
 
         # ---------- 1. load from db ----------
         db_items = db.query(Activity).filter(
