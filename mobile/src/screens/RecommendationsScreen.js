@@ -23,6 +23,7 @@ import {
   trackInteraction,
 } from "../components/api";
 import { useRoute } from "@react-navigation/native";
+import { useMood } from "../components/MoodContext";
 
 /* -------------------- CONFIG -------------------- */
 const ITEMS_PER_PAGE = 5;
@@ -92,7 +93,15 @@ const getTimeOfDay = () => {
 
 export default function RecommendationsScreen({ navigation }) {
   const route = useRoute();
-  const { mood, moodTime, timeOfDay, weather } = route.params || {};
+
+  const { moodData } = useMood();
+
+  const params = route?.params ?? {};
+
+  const mood = params.mood ?? moodData?.mood;
+  const moodTime = params.moodTime ?? moodData?.moodTime;
+  const timeOfDay = params.timeOfDay ?? moodData?.timeOfDay;
+  const weather = params.weather ?? moodData?.weather;
 
   /* --------------- STATE --------------- */
   const [activities, setActivities] = useState([]);

@@ -78,18 +78,25 @@ export default function MoodInputScreen({ navigation }) {
   const handleContinue = async () => {
     if (!selected || loading) return;
 
-    setLoading(true);
-    const moodPayload = {
-      mood: selected,
-      timestamp: new Date().toISOString(),
-    };
+    const timestamp = new Date().toISOString();
 
     try {
+      // save to backend
       await logMood(selected);
 
+      // save to global context
+      setMoodData({
+        mood: selected,
+        moodTime: timestamp,
+        weather: null,
+        context: null,
+        timeOfDay: null,
+      });
+
+      // navigate forward
       navigation.navigate("DetectedContext", {
-        mood: moodPayload.mood,
-        moodTime: moodPayload.timestamp,
+        mood: selected,
+        moodTime: timestamp,
       });
     } catch (err) {
       console.log("Mood save failed", err.response?.data || err.message);

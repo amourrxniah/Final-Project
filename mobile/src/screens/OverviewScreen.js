@@ -201,7 +201,7 @@ export default function OverviewScreen({ navigation }) {
                   <View>
                     <Text style={styles.contextLabel}>Weather</Text>
                     <Text style={styles.contextValue}>
-                      {weather
+                      {weather?.condition && weather?.temperature
                         ? `${capitalize(weather.condition)}, ${weather.temperature}°C`
                         : "Unknown"}
                     </Text>
@@ -231,10 +231,14 @@ export default function OverviewScreen({ navigation }) {
         {/* CONTINUE BUTTON */}
         <TouchableOpacity
           onPress={() =>
-            navigation.navigate("Recommendations", {
-              mood,
-              weather,
-              timeOfDay,
+            navigation.navigate("MainTabs", {
+              screen: "Recommendations",
+              params: {
+                mood,
+                moodTime,
+                weather,
+                timeOfDay,
+              },
             })
           }
         >

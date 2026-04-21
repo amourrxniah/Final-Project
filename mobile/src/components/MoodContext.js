@@ -7,10 +7,11 @@ export function MoodProvider({ children }) {
     mood: null,
     weather: null,
     context: null,
+    timeOfDay: null,
   });
 
   return (
-    <MoodContext.Provider value={(moodData, setMoodData)}>
+    <MoodContext.Provider value={{ moodData, setMoodData }}>
       {children}
     </MoodContext.Provider>
   );

@@ -239,12 +239,10 @@ export default function DetectedContextScreen({ navigation }) {
       <TouchableOpacity
         onPress={() =>
           navigation.navigate("Overview", {
-            context: {
-              mood,
-              moodTime,
-              timeOfDay,
-              weather: weather,
-            },
+            mood,
+            moodTime,
+            timeOfDay,
+            weather,
           })
         }
       >
