@@ -38,6 +38,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
           let iconName;
           if (route.name === "Home") iconName = "home";
           else if (route.name === "MoodInput") iconName = "star-outline";
+          else if (route.name === "Recommendations") iconName = "compass-outline";
           else if (route.name === "MyActivities") iconName = "bookmark-outline";
           else if (route.name === "Profile") iconName = "account-outline";
           else if (route.name === "Settings") iconName = "cog-outline";

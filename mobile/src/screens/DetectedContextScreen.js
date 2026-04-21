@@ -14,6 +14,7 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import { useRoute } from "@react-navigation/native";
 import { getContext } from "../components/api";
+import { useMood } from "../components/MoodContext";
 
 /* -------------------- HELPERS -------------------- */
 const capitalize = (str) => {
@@ -33,6 +34,7 @@ export default function DetectedContextScreen({ navigation }) {
   const [error, setError] = useState(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const { moodData, setMoodData } = useMood();
 
   /* -------------------- INIT -------------------- */
   useEffect(() => {
@@ -237,16 +239,12 @@ export default function DetectedContextScreen({ navigation }) {
       <TouchableOpacity
         onPress={() =>
           navigation.navigate("Overview", {
-            mood: mood,
-            moodTime: moodTime,
-            timeOfDay,
-            weather: weather
-              ? {
-                  condition: weather.condition,
-                  temperature: weather.temperature,
-                  timeOfDay,
-                }
-              : null,
+            context: {
+              mood,
+              moodTime,
+              timeOfDay,
+              weather: weather,
+            },
           })
         }
       >

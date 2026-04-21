@@ -7,7 +7,10 @@ import logging
 from app.database import get_db
 from app.models.activity import Activity
 from app.services.geoapify import get_places
+from app.services.user_preferences import UserPreferenceEngine
 from app.services.scoring import *
+
+engine = UserPreferenceEngine()
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
@@ -91,11 +94,7 @@ def recommendations(
 
         # simulate user behaviour
         recent_ids = set()
-        user_prefs = {
-            "cafe": 0.8,
-            "restaurant": 0.6,
-            "park": 0.4,
-        }
+        user_prefs = engine.get_user_prefs().get("categories", {})
 
         # ---------- 1. load from db ----------
         db_items = db.query(Activity).filter(

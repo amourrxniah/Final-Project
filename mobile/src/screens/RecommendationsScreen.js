@@ -9,7 +9,7 @@ import {
   Platform,
   UIManager,
 } from "react-native";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, act } from "react";
 import * as Location from "expo-location";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -17,7 +17,12 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import SkeletonCard from "../components/SkeletonCard";
-import { getRecommendations, logActivityOpen } from "../components/api";
+import {
+  getRecommendations,
+  logActivityOpen,
+  trackInteraction,
+} from "../components/api";
+import { useRoute } from "@react-navigation/native";
 
 /* -------------------- CONFIG -------------------- */
 const ITEMS_PER_PAGE = 5;
@@ -85,8 +90,9 @@ const getTimeOfDay = () => {
   return "night";
 };
 
-export default function RecommendationsScreen({ route, navigation }) {
-  const { mood, weather } = route.params;
+export default function RecommendationsScreen({ navigation }) {
+  const route = useRoute();
+  const { mood, moodTime, timeOfDay, weather } = route.params || {};
 
   /* --------------- STATE --------------- */
   const [activities, setActivities] = useState([]);
@@ -130,9 +136,7 @@ export default function RecommendationsScreen({ route, navigation }) {
       const mapped = data.map((item) => ({
         ...item,
         distanceNum: item.distance || 0,
-        distance: item.distance
-          ? (item.distance * 0.621371).toFixed(1)
-          : "N/A",
+        distance: item.distance ? (item.distance * 0.621371).toFixed(1) : "N/A",
       }));
 
       setActivities(mapped);
@@ -148,6 +152,16 @@ export default function RecommendationsScreen({ route, navigation }) {
   const openActivity = async (activity, rank) => {
     try {
       await logActivityOpen(activity.id);
+
+      // feed user engine
+      await trackInteraction({
+        type: "click",
+        activityId: activity.id,
+        mood,
+        timeOfDay,
+        rank,
+        timestamp: new Date().toISOString(),
+      });
     } catch (err) {
       console.log("Log error", err);
     }
@@ -170,6 +184,19 @@ export default function RecommendationsScreen({ route, navigation }) {
       })
     : [];
 
+  /* --------------- PAGES --------------- */
+  const trackSkip = async (items) => {
+    try {
+      await trackInteraction({
+        type: "skip_batch",
+        activities: items.map((i) => i.id),
+        mood,
+        timeOfDay,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e) {}
+  };
+
   const totalPages = Math.ceil(sortedActivities.length / ITEMS_PER_PAGE);
 
   const currentItems = sortedActivities
@@ -177,6 +204,8 @@ export default function RecommendationsScreen({ route, navigation }) {
     .slice(0, visibleCount);
 
   const changePage = (next) => {
+    trackSkip(currentItems);
+
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setPage(next);
   };

@@ -13,6 +13,7 @@ import * as Haptics from "expo-haptics";
 import MaskedView from "@react-native-masked-view/masked-view";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import { logMood } from "../components/api";
+import { useMood } from "../components/MoodContext";
 
 /* -------------------- CONSTANTS --------------------*/
 const SCREEN_HEIGHT = Dimensions.get("window").height;
@@ -48,6 +49,7 @@ export default function MoodInputScreen({ navigation }) {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const btnScale = useRef(new Animated.Value(1)).current;
+  const { setMoodData } = useMood();
 
   /* ----- ANIMATIONS ----- */
   const liftAnim = useRef(
@@ -77,13 +79,17 @@ export default function MoodInputScreen({ navigation }) {
     if (!selected || loading) return;
 
     setLoading(true);
+    const moodPayload = {
+      mood: selected,
+      timestamp: new Date().toISOString(),
+    };
 
     try {
       await logMood(selected);
 
       navigation.navigate("DetectedContext", {
-        mood: selected,
-        moodTime: new Date().toISOString(),
+        mood: moodPayload.mood,
+        moodTime: moodPayload.timestamp,
       });
     } catch (err) {
       console.log("Mood save failed", err.response?.data || err.message);
