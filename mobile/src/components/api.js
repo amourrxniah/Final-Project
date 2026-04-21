@@ -296,6 +296,22 @@ export const logActivityOpen = async (activityId) => {
   return res.data;
 };
 
+/* -------------------- TRACK INTERACTION -------------------- */
+export const trackInteraction = async (payload) => {
+  try {
+    const userId = await getUserId();
+    const deviceId = await getDeviceId();
+
+    await api.post("/interactions", {
+      user_id: userId,
+      device_id: deviceId,
+      ...payload,
+    });
+  } catch (err) {
+    console.log("Track interaction error:", err.response?.data || err.message);
+  }
+};
+
 /* -------------------- SEARCH ACTIVITIES -------------------- */
 export const searchActivities = async (query) => {
   if (!query) return [];

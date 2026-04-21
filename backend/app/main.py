@@ -16,6 +16,7 @@ from app.routers.consent import router as consent_router
 from app.routers.auth import router as auth_router
 from app.routers.mood import router as mood_router
 from app.routers.activities import router as activities_router
+from app.routers.interactions import router as interactions_router
 from app.routers.feedback import router as feedback_router
 from app.routers.achievements import router as achievements_router
 from dotenv import load_dotenv
@@ -48,6 +49,7 @@ app.include_router(consent_router)
 app.include_router(auth_router)
 app.include_router(mood_router)
 app.include_router(activities_router)
+app.include_router(interactions_router)
 app.include_router(feedback_router)
 app.include_router(achievements_router)
 

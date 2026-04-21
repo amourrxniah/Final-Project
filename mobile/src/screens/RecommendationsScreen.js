@@ -166,6 +166,7 @@ export default function RecommendationsScreen({ navigation }) {
       await trackInteraction({
         type: "click",
         activityId: activity.id,
+        categories: activity.category_names || [],
         mood,
         timeOfDay,
         rank,
@@ -198,7 +199,10 @@ export default function RecommendationsScreen({ navigation }) {
     try {
       await trackInteraction({
         type: "skip_batch",
-        activities: items.map((i) => i.id),
+        activities: items.map((i) => ({
+          id: i.id,
+          categories: i.category_names || [],
+        })),
         mood,
         timeOfDay,
         timestamp: new Date().toISOString(),

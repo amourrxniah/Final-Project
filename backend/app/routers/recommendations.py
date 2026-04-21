@@ -10,8 +10,6 @@ from app.services.geoapify import get_places
 from app.services.user_preferences import UserPreferenceEngine
 from app.services.scoring import *
 
-engine = UserPreferenceEngine()
-
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
@@ -73,7 +71,7 @@ def preference_boost(categories, user_prefs):
     for c in categories:
         for pref, weight in user_prefs.items():
             if pref in c.lower():
-                boost += weight * 0.1
+                boost += min(0.5, weight * 0.15)
 
     return min(1.3, 1 + boost)
 
@@ -95,6 +93,8 @@ def recommendations(
         # simulate user behaviour
         recent_ids = set()
         try:
+            user_id = ""
+            engine = UserPreferenceEngine(db, user_id)
             user_prefs = engine.get_user_prefs().get("categories", {})
         except Exception:
             user_prefs = {}

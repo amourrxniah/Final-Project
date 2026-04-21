@@ -1,37 +1,28 @@
-from collections import defaultdict
+from sqlalchemy.orm import Session
+from app.models.user_preference import UserPreference
 
 class UserPreferenceEngine:
-    def __init__(self):
-        self.category_weights = defaultdict(float)
-        self.mood_affinity = defaultdict(float)
-        self.time_affinity = defaultdict(float)
+    def __init__(self, db: Session, user_id, int):
+        self.db = db
+        self.user_id = user_id
 
-    # ----- CLICK LEARNING -----
-    def register_click(self, activity, mood, time_of_day):
-        categories = activity.get("category_names", [])
-
-        for c in categories:
-            self.category_weights[c] += 1.0
-
-        if mood:
-            self.mood_affinity[mood] += 0.5
-        
-        if time_of_day:
-            self.time_affinity[time_of_day] += 0.3
-
-    # ----- SKIP LEARNING -----
-    def register_skip(self, activities, mood):
-        for a in activities:
-            for c in a.get("category_names", []):
-                self.category_weights[c] -= 0.2
-
-        if mood:
-            self.mood_affinity[mood] -= 0.1
-
-    # ----- SCORE BOOST -----
+    # ----- GET PREFS FROM DB -----
     def get_user_prefs(self):
-        return {
-            "categories": dict(self.category_weights),
-            "moods": dict(self.mood_affinity),
-            "time": dict(self.time_affinity),
+        prefs = self.db.query(UserPreference).filter_by(
+            user_id=self.user_id
+        ).all()
+
+        result = {
+            "categories": {},
+            "moods": "",
+            "time": {}
         }
+
+        for p in prefs:
+            if p.type == "category":
+                result["categories"][p.key] = p.weight
+            elif p.type == "mood":
+                result["moods"][p.key] = p.weight
+            elif p.type == "time":
+                result["time"][p.key] = p.weight
+        return result
