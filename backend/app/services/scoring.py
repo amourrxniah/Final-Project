@@ -1,5 +1,12 @@
 import math
 
+def normalise_cat(categories):
+    if not categories:
+        return []
+    if isinstance(categories, str):
+        return [categories]
+    return categories
+
 mood_keywords = {
     "low": ["museum", "gallery", "park", "relax", "nature"],
     "neutral": ["cafe", "restaurant", "shop", "cinema"],
@@ -8,7 +15,7 @@ mood_keywords = {
 
 INDOOR_KEYWORDS = [
     "cafe", "restaurant", "cinema", "museum",
-    "gallery", "mall", "fitness", "gym"
+    "gallery", "mall", "gym"
 ]
 
 OUTDOOR_KEYWORDS = [
@@ -16,15 +23,8 @@ OUTDOOR_KEYWORDS = [
 ]
 
 def mood_score(mood: str, categories: list, rating: float = 0, popularity: float = 0):
-    if not categories:
-        return 0.4
+    categories = normalise_cat(categories)
     
-    mood_keywords = {
-        "low": ["museum", "gallery", "park", "relax", "nature"],
-        "neutral": ["cafe", "restaurant", "shop", "cinema"],
-        "high": ["nightclub", "fitness", "sports", "entertainment"]
-    }
-
     allowed = mood_keywords.get(mood, [])
     matches = sum(
         1 for c in categories
@@ -39,6 +39,8 @@ def mood_score(mood: str, categories: list, rating: float = 0, popularity: float
     return min(1.0, base + rating_boost + popularity_boost)
 
 def weather_score(weather: str, categories: list):
+    categories = normalise_cat(categories)
+
     if not weather or not categories:
         return 0.5
     
@@ -51,11 +53,8 @@ def weather_score(weather: str, categories: list):
             matches += 1
         if not bad_weather and any(k in c for k in OUTDOOR_KEYWORDS):
             matches += 1
-
-    if matches == 0:
-        return 0.3
     
-    return min(1.0, 0.6 + (matches * 0.2))
+    return 0.3 if matches == 0 else min(1.0, 0.6 + matches * 0.2)
 
 def distance_score(distance_km: float, max_km: float = 5.0):
     if distance_km <= 0:
@@ -66,26 +65,21 @@ def distance_score(distance_km: float, max_km: float = 5.0):
     return math.exp(-distance_km / max_km)
 
 def price_score(price: int, mood: str):
-    if price == 0:
+    if not price:
         return 0.5
     
     if mood == "low":
-        if price <= 2:
-            return 1.0
-        return 0.7
-
+            return 1.0 if price <= 2 else 0.7
     if mood == "high":
         return 0.9
     
-    if price <= 3:
-        return 0.9
-    return 0.7
+    return 0.9 if price <= 3 else 0.7
 
 def time_score(time_of_day: str, categories: list):
-    if not time_of_day or not categories:
-        return 0.5
+    categories = normalise_cat(categories)
     
-    time_of_day = time_of_day.lower()
+    if not time_of_day:
+        return 0.5
 
     morning = ["cafe", "park", "nature", "gym"]
     afternoon = ["museum", "shopping", "park", "gallery"]
@@ -99,18 +93,15 @@ def time_score(time_of_day: str, categories: list):
         "night": night,
     }
 
-    allowed = map_time.get(time_of_day, [])
+    allowed = map_time.get(time_of_day.lower(), [])
 
     matches = sum(
         1 for c in categories
         if any(k in c.lower() for k in allowed)
     )
 
-    if matches == 0:
-        return 0.3
+    return 0.3 if matches == 0 else min(1.0, 0.6 + matches * 0.2)
     
-    return min(1.0, 0.6 + matches * 0.2)
-
 def total_score(
     mood_sc: float, 
     weather_sc: float, 

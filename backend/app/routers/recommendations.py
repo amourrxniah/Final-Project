@@ -7,14 +7,7 @@ import logging
 from app.database import get_db
 from app.models.activity import Activity
 from app.services.foursquare import get_places
-from app.services.scoring import (
-    mood_score, 
-    weather_score, 
-    distance_score, 
-    price_score, 
-    time_score,
-    total_score
-)
+from app.services.scoring import *
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
@@ -46,19 +39,16 @@ def recommendations(
     db: Session = Depends(get_db)
 ):
     try:
-        logger.info(
-            f"Recommendations | mood={mood} weather={weather} time={time_of_day}")
-
         results = []
         seen_ids = set()
 
         # ---------- DB FALLBACK ----------
-        nearby_db = db.query(Activity).filter(
+        db_items = db.query(Activity).filter(
             func.abs(Activity.latitude - lat) <= 0.15,
             func.abs(Activity.longitude - lon) <= 0.15
         ).all()
 
-        for activity in nearby_db:
+        for activity in db_items:
             dist = distance_km(lat, lon, activity.latitude, activity.longitude)
             if dist > 10:
                 continue
@@ -71,7 +61,7 @@ def recommendations(
                 price_score(activity.price, mood)
             )
 
-            if score < 0.25:
+            if score < 0.15:
                 continue
 
             results.append({
@@ -89,69 +79,40 @@ def recommendations(
 
             seen_ids.add(activity.id)
 
+        # --------------- FETCH FROM API ---------------
+        api_places = get_places(lat, lon, 30)
+
+        place_ids = [p["place_id"] for p in api_places if p.get("place_id")]
+        existing = db.query(Activity).filter(Activity.place_id.in_(place_ids)).all()
+        existing_map = {e.place_id: e for e in existing}
+        
+        # --------------- PROCESS API PLACES ---------------
+        for p in api_places:
             if len(results) >= 25:
                 break
 
-        # --------------- FETCH FROM API ---------------
-        api_places = get_places(lat=lat, lon=lon, limit=30) or []
-        logger.info(f"Foursquare returned {len(api_places)} places")
+            pid = p.get("place_id")
+            if not pid or pid in seen_ids:
+                continue
 
-        if api_places:
-            place_ids = [p["place_id"] for p in api_places if p.get("place_id")]
+            categories = pid.get("categories", [])
+            activity = existing_map.get(pid)
 
-            existing = db.query(Activity).filter(
-                Activity.place_id.in_(place_ids)
-            ).all()
+            if not activity:
+                activity = Activity(**p)
+                db.add(activity)
+                db.flush()
+                db.refresh(activity)
+            else:
+                #keep DB in sync with API data
+                for k, v in p.items():
+                    setattr(activity, k, v)
 
-            existing_map = {a.place_id: a for a in existing}
-        
-            # --------------- PROCESS API PLACES ---------------
-            for place in api_places:
-                if len(results) >= 25:
-                    break
-
-                place_id = place.get("place_id")
-                if not place_id:
-                    continue
-
-                categories = place.get("categories", [])
-
-                activity = existing_map.get(place_id)
-
-                if not activity:
-                    activity = Activity(
-                        place_id=place_id,
-                        title=place.get("title"),
-                        subtitle=place.get("subtitle"),
-                        categories=categories,
-                        category_names=place.get("category_names"),
-                        latitude=place.get("lat"),
-                        longitude=place.get("lon"),
-                        rating=place.get("rating") or 4.0,
-                        price=place.get("price") or 2,
-                        popularity=place.get("popularity") or 0.5,
-                        mood=mood,
-                        weather=weather
+                dist = p.get("distance")
+                if dist is None:
+                    dist = distance_km(
+                        lat, lon, activity.latitude, activity.longitude
                     )
-                    db.add(activity)
-                    db.flush()
-                else:
-                    #keep DB in sync with API data
-                    activity.title = place.get("title")
-                    activity.subtitle = place.get("subtitle")
-                    activity.categories = categories
-                    activity.category_names = place.get("category_names")
-                    activity.latitude = place.get("lat")
-                    activity.longitude = place.get("lon")
-                    activity.rating = place.get("rating") or activity.rating
-                    activity.price = place.get("price") or activity.price
-                    activity.popularity = place.get("popularity") or activity.popularity
-                    activity.mood = mood
-                    activity.weather = weather
-
-                dist = place.get("distance") or distance_km(
-                    lat, lon, activity.latitude, activity.longitude
-                )
 
                 score = total_score(
                     mood_score(mood, categories, activity.rating, activity.popularity),
@@ -161,10 +122,10 @@ def recommendations(
                     price_score(activity.price, mood)
                 )
 
-                activity.score = score
-
-                if activity.id in seen_ids:
+                if score < 0.15:
                     continue
+
+                activity.score = score
 
                 results.append({
                     "id": activity.id,

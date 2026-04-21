@@ -6,7 +6,7 @@ from app.database import Base
 class Activity(Base):
     __tablename__ = "activities"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     place_id = Column(String, unique=True, index=True)
 
     title = Column(String)

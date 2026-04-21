@@ -29,6 +29,8 @@ def get_places(lat, lon, limit=30):
          "sort": "RELEVANCE"
     }
 
+    data = None
+
     for attempt in range(2):
         try:
             res = requests.get(BASE_URL, headers=headers, params=params, timeout=6)
@@ -41,8 +43,12 @@ def get_places(lat, lon, limit=30):
                 return []
             time.sleep(1)
 
-    results = data.get("results", [])
+    if not data:
+        return []
     places = []
+
+    results = data.get("results", [])
+    
 
     for p in results:
         try:
@@ -51,6 +57,7 @@ def get_places(lat, lon, limit=30):
                 continue
 
             categories = p.get("categories", [])
+            
             category_names = [c.get("name", "") for c in categories]
 
             places.append({
