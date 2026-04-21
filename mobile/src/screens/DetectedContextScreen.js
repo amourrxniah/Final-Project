@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 24,
-    paddingHorizontal: 30,
+    paddingHorizontal: 32,
     paddingVertical: 38,
     minHeight: 150,
     borderRadius: 26,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 18,
     alignItems: "center",
-    marginTop: 90,
+    marginTop: 110,
   },
 
   continueText: {

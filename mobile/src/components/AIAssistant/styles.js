@@ -4,7 +4,7 @@ export default StyleSheet.create({
     aiButton: {
         position: "absolute",
         left: 0,
-        top: 0,
+        top: -30,
         zIndex: 1000
     },
 

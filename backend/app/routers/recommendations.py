@@ -93,8 +93,7 @@ def recommendations(
             pid = p.get("place_id")
             if not pid:
                 continue
-
-            categories = p.get("categories")
+            
             activity = existing_map.get(pid)
 
             if not activity:
@@ -108,13 +107,13 @@ def recommendations(
                     setattr(activity, k, v)
 
                 # distance
-                dist = p.get("distance")
-                if dist is None:
-                    dist = distance_km(
-                        lat, lon, 
-                        activity.latitude, 
-                        activity.longitude
-                    )
+                dist = p.get("distance") or distance_km(
+                    lat, lon, 
+                    activity.latitude, 
+                    activity.longitude
+                )
+
+                categories = p["category_names"]
 
                 # score
                 score = total_score(
@@ -130,17 +129,17 @@ def recommendations(
 
                 activity.score = score
 
-                results.append({
-                    "id": activity.id,
-                    "title": activity.title,
-                    "subtitle": activity.subtitle,
-                    "category": activity.categories,
-                    "category_names": activity.category_names,
-                    "distance": round(dist, 2),
-                    "score": round(score, 3)
-                })
-
-                seen_ids.add(activity.id)
+                if activity.id not in seen_ids:
+                    results.append({
+                        "id": activity.id,
+                        "title": activity.title,
+                        "subtitle": activity.subtitle,
+                        "category": activity.categories,
+                        "category_names": activity.category_names,
+                        "distance": round(dist, 2),
+                        "score": round(score, 3)
+                    })
+                    seen_ids.add(activity.id)
 
             db.commit()
         

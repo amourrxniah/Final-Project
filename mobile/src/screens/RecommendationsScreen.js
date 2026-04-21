@@ -286,7 +286,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                       </View>
 
                       {/* ARROW */}
-                      <MaterialCommunityIcons 
+                      <MaterialCommunityIcons
                         name="chevron-right"
                         size={28}
                         color="#6b5cff"

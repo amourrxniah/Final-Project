@@ -8,10 +8,10 @@ BASE_URL = "https://api.geoapify.com/v2/places"
 CATEGORIES = [
     "catering.restaurant",
     "catering.cafe",
-    "entertainment",
+    "entertainment.cinema",
     "tourism.museum",
     "leisure.park",
-    "sport",
+    "sport.fitness",
 ]
 
 # -------------------- FETCH PLACES --------------------
