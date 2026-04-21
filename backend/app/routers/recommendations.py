@@ -28,6 +28,24 @@ def distance_km(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+# -------------------- CLEAN DATA FOR DB --------------------
+def clean_place_data(p: dict):
+    """remove fields not in Activity model"""
+    allowed_fields = {
+        "place_id",
+        "title",
+        "subtitle",
+        "categories",
+        "category_names",
+        "latitude",
+        "longitude",
+        "rating",
+        "price",
+        "popularity",
+    }
+
+    return {k: v for k, v in p.items() if k in allowed_fields}
+
 # -------------------- RECOMMENDATIONS ENDPOINT --------------------
 @router.get("/")
 def recommendations(
@@ -98,6 +116,7 @@ def recommendations(
             if not pid:
                 continue
             
+            clean_data = clean_place_data(p)
             activity = existing_map.get(pid)
 
             # ---------- CREATE NEW (LEARNING) ----------
@@ -108,7 +127,7 @@ def recommendations(
                 db.refresh(activity)
             else:
                 #keep DB synced
-                for k, v in p.items():
+                for k, v in clean_data.items():
                     setattr(activity, k, v)
 
             # distance
@@ -118,7 +137,7 @@ def recommendations(
                 activity.longitude
             )
 
-            categories = p.get("category_names", [])
+            categories = clean_data.get("category_names", [])
 
             # score
             score = total_score(
