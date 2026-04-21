@@ -3,8 +3,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
   ScrollView,
   Animated,
   LayoutAnimation,
@@ -25,7 +23,6 @@ import {
   getUserActivities,
   addFavourite,
   removeFavourite,
-  sendActivityFeedback,
   logActivityOpen,
 } from "../components/api";
 
@@ -50,7 +47,7 @@ const CATEGORY_ICON_MAP = [
 ];
 
 const getCategoryIcon = (categories = []) => {
-  const joined = categories.join(" ").toLowerCase();
+  const joined = (categories || []).join(" ").toLowerCase();
   const found = CATEGORY_ICON_MAP.find((e) =>
     e.match.some((k) => joined.includes(k)),
   );
@@ -103,25 +100,10 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(0);
-  const [limit, setLimit] = useState(10);
-
-  const [visibleCount, setVisibleCount] = useState(3);
-
-  const [feedback, setFeedback] = useState({});
-  const [favourites, setFavourites] = useState({});
-
   const [sortOpen, setSortOpen] = useState(false);
   const [sortMode, setSortMode] = useState("relevance");
 
-  const [undoItem, setUndoItem] = useState(null);
-
-  const heartRefs = useRef({});
-  const favouritesTargetRef = useRef(null);
-
-  const { animateToTarget, FlyingHeart, bookmarkPulse } =
-    useFavouriteAnimation();
-
-  const animatedValues = useRef([]);
+  const [visibleCount, setVisibleCount] = useState(3);
 
   /* --------------- INITIAL LOAD --------------- */
   useEffect(() => {
@@ -153,14 +135,6 @@ export default function RecommendationsScreen({ route, navigation }) {
       });
 
       if (!Array.isArray(data)) return setLoading(false);
-
-      const mapped = data.map((item) => ({
-        ...item,
-        distanceNum: item.distance || 0,
-        distance: item.distance ? (item.distance * 0.621371).toFixed(1) : "N/A",
-      }));
-
-      animatedValues.current = mapped.map(() => new Animated.Value(0));
 
       setActivities(mapped);
       setLoading(false);
@@ -202,76 +176,6 @@ export default function RecommendationsScreen({ route, navigation }) {
       setFeedback(fbMap);
     } catch (err) {
       console.log("Failed loading stored preferences", err);
-    }
-  };
-
-  /* -------------------- FAVOURITES --------------------*/
-  const toggleFavourite = async (item) => {
-    const isAdding = !favourites[item.id];
-
-    //updating
-    setFavourites((prev) => ({ ...prev, [item.id]: isAdding }));
-
-    try {
-      if (isAdding) {
-        // animate heart to bookmark
-        heartRefs.current[item.id].measureInWindow((sx, sy, sw, sh) => {
-          favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
-            animateToTarget(
-              { x: sx + sw / 2 - 15, y: sy + sh / 2 - 15 },
-              { x: ex + ew / 2 - 15, y: ey + eh / 2 - 15 },
-            );
-          });
-        });
-
-        await addFavourite(item.id);
-
-        setUndoItem(item);
-
-        //auto hide undo after 5 seconds
-        setTimeout(() => setUndoItem(null), 5000);
-      } else {
-        await removeFavourite(item.id);
-      }
-    } catch (err) {
-      console.log("Favourite failed", err);
-
-      //revert if failed
-      setFavourites((prev) => ({ ...prev, [item.id]: !isAdding }));
-    }
-  };
-
-  const removeFavouriteFromDB = async (id) => {
-    try {
-      await removeFavourite(id);
-    } catch (err) {
-      console.log("Undo failed", err);
-    }
-  };
-
-  /* -------------------- FEEDBACK --------------------*/
-  const handleFeedback = async (activityId, type) => {
-    const current = feedback[activityId];
-    const newValue = current === type ? null : type;
-
-    setFeedback((prev) => ({
-      ...prev,
-      [activityId]: newValue,
-    }));
-
-    try {
-      await sendActivityFeedback({
-        activityId,
-        feedback: newValue,
-      });
-    } catch (err) {
-      console.log("Feedback failed", err);
-
-      //revert on error
-      setFeedback((prev) => ({
-        ...prev,
-        [activityId]: current,
-      }));
     }
   };
 
@@ -411,122 +315,86 @@ export default function RecommendationsScreen({ route, navigation }) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {Array.isArray(currentItems) && currentItems.map((item, index) => {
-              const rank = page * ITEMS_PER_PAGE + index + 1;
-              const tag = getTagFromCategories(item.category_names || []);
-              const state = feedback[item.id];
+            {Array.isArray(currentItems) &&
+              currentItems.map((item, index) => {
+                const rank = page * ITEMS_PER_PAGE + index + 1;
+                const tag = getTagFromCategories(item.category_names || []);
+                const state = feedback[item.id];
 
-              const animatedStyle = {
-                opacity: animatedValues.current[index] || 1,
-                transform: [
-                  {
-                    translateY:
-                      animatedValues.current[index]?.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [20, 0],
-                      }) || 0,
-                  },
-                ],
-              };
+                const animatedStyle = {
+                  opacity: animatedValues.current[index] || 1,
+                  transform: [
+                    {
+                      translateY:
+                        animatedValues.current[index]?.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [20, 0],
+                        }) || 0,
+                    },
+                  ],
+                };
 
-              return (
-                <View key={item.id} style={styles.cardWrapper}>
-                  <TouchableOpacity
-                    style={styles.card}
-                    activeOpacity={0.9}
-                    onPress={() => openActivity(item, rank)}
-                  >
-                    {/* RANK */}
-                    <View style={styles.rankCircle}>
-                      <Text style={styles.rankText}>{rank}</Text>
-                    </View>
-
-                    {/* HEART */}
+                return (
+                  <View key={item.id} style={styles.cardWrapper}>
                     <TouchableOpacity
-                      ref={(ref) => (heartRefs.current[item.id] = ref)}
-                      style={styles.heart}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        toggleFavourite(item);
-                      }}
+                      style={styles.card}
+                      activeOpacity={0.9}
+                      onPress={() => openActivity(item, rank)}
                     >
-                      <MaterialCommunityIcons
-                        name={favourites[item.id] ? "heart" : "heart-outline"}
-                        size={26}
-                        color={favourites[item.id] ? "#ff4fa3" : "#bbb"}
-                      />
-                    </TouchableOpacity>
-
-                    <View style={styles.row}>
-                      <View style={styles.iconCircle}>
-                        <MaterialCommunityIcons
-                          name={getCategoryIcon(item.category_names)}
-                          size={26}
-                          color="#6b5cff"
-                        />
+                      {/* RANK */}
+                      <View style={styles.rankCircle}>
+                        <Text style={styles.rankText}>{rank}</Text>
                       </View>
 
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.name}>{item.title}</Text>
-                        <Text style={styles.desc}>{item.subtitle}</Text>
+                      {/* HEART */}
+                      <TouchableOpacity
+                        ref={(ref) => (heartRefs.current[item.id] = ref)}
+                        style={styles.heart}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          toggleFavourite(item);
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name={favourites[item.id] ? "heart" : "heart-outline"}
+                          size={26}
+                          color={favourites[item.id] ? "#ff4fa3" : "#bbb"}
+                        />
+                      </TouchableOpacity>
 
-                        <View style={styles.metaRow}>
-                          <Text style={styles.meta}>
-                            📍 {item.distance} miles
-                          </Text>
+                      <View style={styles.row}>
+                        <View style={styles.iconCircle}>
+                          <MaterialCommunityIcons
+                            name={getCategoryIcon(item.category_names)}
+                            size={26}
+                            color="#6b5cff"
+                          />
+                        </View>
 
-                          <View style={styles.tagPill}>
-                            <Ionicons
-                              name={tag.icon}
-                              size={16}
-                              color="#6b5cff"
-                            />
-                            <Text style={styles.tagText}>{tag.label}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.name}>{item.title}</Text>
+                          <Text style={styles.desc}>{item.subtitle}</Text>
+
+                          <View style={styles.metaRow}>
+                            <Text style={styles.meta}>
+                              📍 {item.distance} miles
+                            </Text>
+
+                            <View style={styles.tagPill}>
+                              <Ionicons
+                                name={tag.icon}
+                                size={16}
+                                color="#6b5cff"
+                              />
+                              <Text style={styles.tagText}>{tag.label}</Text>
+                            </View>
                           </View>
                         </View>
                       </View>
-                    </View>
-
-                    {/* FEEDBACK */}
-                    <View style={styles.feedback}>
-                      <TouchableOpacity
-                        style={[
-                          styles.feedbackBtn,
-                          state === "up" && styles.activeBtn,
-                        ]}
-                        onPress={() => handleFeedback(item.id, "up")}
-                      >
-                        <MaterialCommunityIcons
-                          name={
-                            state === "up" ? "thumb-up" : "thumb-up-outline"
-                          }
-                          size={20}
-                        />
-                        <Text>Like</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.feedbackBtn,
-                          state === "down" && styles.activeBtn,
-                        ]}
-                        onPress={() => handleFeedback(item.id, "down")}
-                      >
-                        <MaterialCommunityIcons
-                          name={
-                            state === "down"
-                              ? "thumb-down"
-                              : "thumb-down-outline"
-                          }
-                          size={20}
-                        />
-                        <Text>Dislike</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
 
             {/* PAGINATION */}
             {totalPages > 1 && (
@@ -566,39 +434,6 @@ export default function RecommendationsScreen({ route, navigation }) {
         {/* AI ASSISTANT */}
         {/* <AIAssistant mood={mood} /> */}
       </View>
-
-      <FlyingHeart />
-
-      {undoItem && (
-        <View style={styles.undoContainer}>
-          <View style={styles.undoTextWrap}>
-            <Text
-              style={styles.undoText}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              Added "{undoItem.title}" to favourites
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => {
-              setFavourites((prev) => ({ ...prev, [undoItem.id]: false }));
-              removeFavouriteFromDB(undoItem.id);
-              setUndoItem(null);
-            }}
-          >
-            <Text style={styles.undoBtn}>Undo</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* <BottomNav
-        navigation={navigation}
-        active="mood"
-        favouriteRef={favouritesTargetRef}
-        bookmarkPulse={bookmarkPulse}
-      /> */}
     </View>
   );
 }

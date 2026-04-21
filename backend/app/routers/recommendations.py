@@ -44,14 +44,12 @@ def recommendations(
 
         # ---------- DB FALLBACK ----------
         db_items = db.query(Activity).filter(
-            func.abs(Activity.latitude - lat) <= 0.15,
-            func.abs(Activity.longitude - lon) <= 0.15
+            func.abs(Activity.latitude - lat) <= 0.2,
+            func.abs(Activity.longitude - lon) <= 0.2
         ).all()
 
         for activity in db_items:
             dist = distance_km(lat, lon, activity.latitude, activity.longitude)
-            if dist > 10:
-                continue
 
             score = total_score(
                 mood_score(mood, activity.categories, activity.rating, activity.popularity),
@@ -95,7 +93,7 @@ def recommendations(
             if not pid or pid in seen_ids:
                 continue
 
-            categories = pid.get("categories", [])
+            categories = p.get("categories", [])
             activity = existing_map.get(pid)
 
             if not activity:
