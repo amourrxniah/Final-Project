@@ -33,6 +33,10 @@ def get_places(lat, lon, limit=30):
                 print("GEOAPIFY 401 - check API key")
                 return []
             
+            if res.status_code == 400:
+                print("GEOAPIFY 400 BAD REQUEST:", res.text)
+                return []
+            
             res.raise_for_status()
             data = res.json()
             break
@@ -56,7 +60,7 @@ def get_places(lat, lon, limit=30):
             props = f.get("properties", {})
             coords = f.get("geometry", {}).get("coordinates", [])
             
-            if not coords:
+            if not coords or len(coords) < 2:
                 continue
 
             categories = props.get("categories", []) or []
@@ -67,8 +71,8 @@ def get_places(lat, lon, limit=30):
                 "subtitle": props.get("formatted", ""),
                 "categories": categories,
                 "category_names": categories,
-                "lat": coords[1],
-                "lon": coords[0],
+                "latitude": coords[1],
+                "longitude": coords[0],
                 "distance": (props.get("distance", 0) or 0) / 1000,
 
                 # fallback scoring

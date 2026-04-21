@@ -96,13 +96,14 @@ def recommendations(
             
             activity = existing_map.get(pid)
 
+            # ---------- CREATE NEW (LEARNING) ----------
             if not activity:
                 activity = Activity(**p)
                 db.add(activity)
                 db.flush()
                 db.refresh(activity)
             else:
-                #keep DB in sync with API data
+                #keep DB synced
                 for k, v in p.items():
                     setattr(activity, k, v)
 
@@ -113,7 +114,7 @@ def recommendations(
                     activity.longitude
                 )
 
-                categories = p["category_names"]
+                categories = p.get("category_names", [])
 
                 # score
                 score = total_score(
