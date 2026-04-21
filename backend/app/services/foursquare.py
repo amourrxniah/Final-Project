@@ -17,7 +17,7 @@ CATEGORY_IDS = [
 # -------------------- FETCH PLACES --------------------
 def get_places(lat, lon, limit=30):
     headers = {
-         "Authorization": f"Bearer {FOURSQUARE_API_KEY}",
+         "Authorization": FOURSQUARE_API_KEY,
          "Accept": "application/json"
     }
 
@@ -29,13 +29,11 @@ def get_places(lat, lon, limit=30):
          "sort": "RELEVANCE"
     }
 
-    data = None
-
     for attempt in range(3):
         try:
             res = requests.get(BASE_URL, headers=headers, params=params, timeout=10)
 
-            if res.status_code == 402:
+            if res.status_code == 401:
                 print("FOURSQUARE 401 - check API key")
                 return []
             
@@ -51,8 +49,9 @@ def get_places(lat, lon, limit=30):
             print(f"Foursquare error attempt {attempt+1}:", e)
             if attempt == 2:
                 return []
-    places = []
+    
     results = data.get("results", [])
+    places = []
     
     for p in results:
         try:
