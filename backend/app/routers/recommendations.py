@@ -42,7 +42,7 @@ def recommendations(
         results = []
         seen_ids = set()
 
-        # ---------- DB FIRST (LEARNING) ----------
+        # ---------- 1. load from db ----------
         db_items = db.query(Activity).filter(
             func.abs(Activity.latitude - lat) <= 0.2,
             func.abs(Activity.longitude - lon) <= 0.2
@@ -50,12 +50,13 @@ def recommendations(
 
         for activity in db_items:
             dist = distance_km(lat, lon, activity.latitude, activity.longitude)
+            categories = activity.category_names or []
 
             score = total_score(
-                mood_score(mood, activity.categories, activity.rating, activity.popularity),
-                weather_score(weather, activity.categories),
+                mood_score(mood, categories, activity.rating, activity.popularity),
+                weather_score(weather, categories),
                 distance_score(dist),
-                time_score(time_of_day, activity.categories),
+                time_score(time_of_day, categories),
                 price_score(activity.price, mood)
             )
 
@@ -67,15 +68,18 @@ def recommendations(
                 "title": activity.title,
                 "subtitle": activity.subtitle,
                 "category": activity.categories,
-                "category_names": activity.category_names or [],
+                "category_names": categories,
                 "distance": round(dist, 2),
                 "score": round(score, 3)
             })
 
             seen_ids.add(activity.id)
 
-        # --------------- FETCH FROM API (GEOAPIFY) ---------------
+        # --------------- 2. fetch from geoapify ---------------
         api_places = get_places(lat, lon, 30)
+
+        if not api_places:
+            logger.warning("No places returned from Geoapify")
 
         place_ids = [p["place_id"] for p in api_places if p.get("place_id")]
 
@@ -85,7 +89,7 @@ def recommendations(
 
         existing_map = {e.place_id: e for e in existing}
         
-        # --------------- PROCESS API PLACES ---------------
+        # --------------- 3. process api data ---------------
         for p in api_places:
             if len(results) >= 25:
                 break
@@ -107,42 +111,43 @@ def recommendations(
                 for k, v in p.items():
                     setattr(activity, k, v)
 
-                # distance
-                dist = p.get("distance") or distance_km(
-                    lat, lon, 
-                    activity.latitude, 
-                    activity.longitude
-                )
+            # distance
+            dist = p.get("distance") or distance_km(
+                lat, lon, 
+                activity.latitude, 
+                activity.longitude
+            )
 
-                categories = p.get("category_names", [])
+            categories = p.get("category_names", [])
 
-                # score
-                score = total_score(
-                    mood_score(mood, categories, activity.rating, activity.popularity),
-                    weather_score(weather, categories),
-                    distance_score(dist),
-                    time_score(time_of_day, categories),
-                    price_score(activity.price, mood)
-                )
+            # score
+            score = total_score(
+                mood_score(mood, categories, activity.rating, activity.popularity),
+                weather_score(weather, categories),
+                distance_score(dist),
+                time_score(time_of_day, categories),
+                price_score(activity.price, mood)
+            )
 
-                if score < 0.15:
-                    continue
+            if score < 0.15:
+                continue
 
-                activity.score = score
+            activity.score = score
 
-                if activity.id not in seen_ids:
-                    results.append({
-                        "id": activity.id,
-                        "title": activity.title,
-                        "subtitle": activity.subtitle,
-                        "category": activity.categories,
-                        "category_names": activity.category_names,
-                        "distance": round(dist, 2),
-                        "score": round(score, 3)
-                    })
-                    seen_ids.add(activity.id)
+            # add to results
+            if activity.id not in seen_ids:
+                results.append({
+                    "id": activity.id,
+                    "title": activity.title,
+                    "subtitle": activity.subtitle,
+                    "category": activity.categories,
+                    "category_names": activity.category_names,
+                    "distance": round(dist, 2),
+                    "score": round(score, 3)
+                })
+                seen_ids.add(activity.id)
 
-            db.commit()
+        db.commit()
         
         #sort by score and limit results
         results.sort(key=lambda x: x["score"], reverse=True)

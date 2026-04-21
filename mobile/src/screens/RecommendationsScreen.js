@@ -130,7 +130,7 @@ export default function RecommendationsScreen({ route, navigation }) {
       const mapped = data.map((item) => ({
         ...item,
         distanceNum: item.distance || 0,
-        distance: itemm.distance
+        distance: item.distance
           ? (item.distance * 0.621371).toFixed(1)
           : "N/A",
       }));
