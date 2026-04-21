@@ -290,6 +290,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                         name="chevron-right"
                         size={28}
                         color="#6b5cff"
+                        style={styles.arrow}
                       />
 
                       <View style={styles.row}>
@@ -547,7 +548,7 @@ const styles = StyleSheet.create({
     color: "#555",
   },
 
-  heart: {
+  arrow: {
     position: "absolute",
     top: 12,
     right: 12,

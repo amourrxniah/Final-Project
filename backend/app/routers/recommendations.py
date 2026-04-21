@@ -46,6 +46,34 @@ def clean_place_data(p: dict):
 
     return {k: v for k, v in p.items() if k in allowed_fields}
 
+# -------------------- PERSONALISED HELPERS --------------------
+def diversity_penalty(category, seen_categories):
+    """penalise repeating same categories"""
+    if not category:
+        return 1.0
+    
+    count = seen_categories.get(category, 0)
+    return max(0.6, 1 - (count * 0.15))
+
+def recency_penalty(activity_id, recent_ids):
+    """avoid recommending recently opened items"""
+    if activity_id in recent_ids:
+        return 0.5
+    return 1.0
+    
+def preference_boost(categories, user_prefs):
+    """boost categories user interacts with"""
+    if not categories or not user_prefs:
+        return 1.0
+    
+    boost = 0
+    for c in categories:
+        for pref, weight in user_prefs.items():
+            if pref in c.lower():
+                boost += weight * 0.1
+
+    return min(1.3, 1 + boost)
+
 # -------------------- RECOMMENDATIONS ENDPOINT --------------------
 @router.get("/")
 def recommendations(
@@ -59,6 +87,15 @@ def recommendations(
     try:
         results = []
         seen_ids = set()
+        seen_categories = {}
+
+        # simulate user behaviour
+        recent_ids = set()
+        user_prefs = {
+            "cafe": 0.8,
+            "restaurant": 0.6,
+            "park": 0.4,
+        }
 
         # ---------- 1. load from db ----------
         db_items = db.query(Activity).filter(
@@ -70,7 +107,7 @@ def recommendations(
             dist = distance_km(lat, lon, activity.latitude, activity.longitude)
             categories = activity.category_names or []
 
-            score = total_score(
+            base_score = total_score(
                 mood_score(mood, categories, activity.rating, activity.popularity),
                 weather_score(weather, categories),
                 distance_score(dist),
@@ -78,7 +115,16 @@ def recommendations(
                 price_score(activity.price, mood)
             )
 
-            if score < 0.15:
+            category_main = categories[0] if categories else None
+
+            score = (
+                base_score *
+                diversity_penalty(category_main, seen_categories) *
+                recency_penalty(activity.id, recent_ids) *
+                preference_boost(categories, user_prefs)
+            )
+
+            if score < 0.2:
                 continue
 
             results.append({
@@ -93,11 +139,11 @@ def recommendations(
 
             seen_ids.add(activity.id)
 
+            if category_main:
+                seen_categories[category_main] = seen_categories.get(category_main, 0) + 1
+
         # --------------- 2. fetch from geoapify ---------------
         api_places = get_places(lat, lon, 30)
-
-        if not api_places:
-            logger.warning("No places returned from Geoapify")
 
         place_ids = [p["place_id"] for p in api_places if p.get("place_id")]
 
@@ -140,7 +186,7 @@ def recommendations(
             categories = clean_data.get("category_names", [])
 
             # score
-            score = total_score(
+            base_score = total_score(
                 mood_score(mood, categories, activity.rating, activity.popularity),
                 weather_score(weather, categories),
                 distance_score(dist),
@@ -148,7 +194,16 @@ def recommendations(
                 price_score(activity.price, mood)
             )
 
-            if score < 0.15:
+            category_main = categories[0] if categories else None
+
+            score = (
+                base_score *
+                diversity_penalty(category_main, seen_categories) *
+                recency_penalty(activity.id, recent_ids) *
+                preference_boost(categories, user_prefs)
+            )
+
+            if score < 0.2:
                 continue
 
             activity.score = score
@@ -166,10 +221,14 @@ def recommendations(
                 })
                 seen_ids.add(activity.id)
 
+                if category_main:
+                    seen_categories[category_main] = seen_categories.get(category_main, 0) + 1
+
         db.commit()
         
-        #sort by score and limit results
+        #final ranking
         results.sort(key=lambda x: x["score"], reverse=True)
+        
         return results[:25]
 
     except Exception as e:
