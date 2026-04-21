@@ -27,7 +27,7 @@ export default function ForgotPasswordScreen({ navigation }) {
     try {
       setLoading(true);
 
-      await requestPasswordReset(email)
+      await requestPasswordReset(email);
 
       Alert.alert(
         "Check your email",
@@ -89,7 +89,7 @@ export default function ForgotPasswordScreen({ navigation }) {
             style={styles.button}
           >
             <Text style={styles.buttonText}>
-                {loading ? "Sending..." : "Send Reset Link"}
+              {loading ? "Sending..." : "Send Reset Link"}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -100,59 +100,57 @@ export default function ForgotPasswordScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: {
-        flex: 1,
-        paddingHorizontal: 24,
-        backgroundColor: "#f0f8ff"
-    },
+    flex: 1,
+    paddingHorizontal: 24,
+    backgroundColor: "#e9eef6",
+  },
 
-    back: {
-        marginTop: 70,
-    },
+  back: {
+    marginTop: 70,
+  },
 
-    content: {
-        marginTop: 100
-    },
+  content: {
+    marginTop: 100,
+  },
 
-    title: {
-        fontSize: 32,
-        fontWeight: "700",
-        textAlign: "center",
-    },
+  title: {
+    fontSize: 32,
+    fontWeight: "700",
+    textAlign: "center",
+  },
 
-    subtitle: {
-        textAlign: "center",
-        color: "#666",
-        marginVertical: 16,
-        fontSize: 18
-    },
+  subtitle: {
+    textAlign: "center",
+    color: "#666",
+    marginVertical: 16,
+    fontSize: 18,
+  },
 
-    input: {
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        padding: 14,
-        fontSize: 15,
-        marginBottom: 12,
-        borderColor: "#ccc",
-        borderWidth: 1.5,
-        shadowColor: "#000",
-        shadowOpacity: 0.04,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2
-    },
+  input: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    marginBottom: 12,
+    borderColor: "#ccc",
+    borderWidth: 1.5,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
 
-    button: {
-        paddingVertical: 16,
-        borderRadius: 999,
-        alignItems: "center",
-        marginTop: 5,
-        
-    },
+  button: {
+    paddingVertical: 16,
+    borderRadius: 999,
+    alignItems: "center",
+    marginTop: 5,
+  },
 
-    buttonText: {
-        color: "#fff",
-        fontWeight: "700",
-        fontSize: 17
-    },
-
+  buttonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 17,
+  },
 });

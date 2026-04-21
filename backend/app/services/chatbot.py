@@ -1,6 +1,6 @@
 from datetime import datetime
 import requests
-import google.generativeai as genai
+from google import genai
 
 from app.services.intent import detect_intent
 from app.database import SessionLocal
@@ -8,8 +8,7 @@ from app.models.response import ChatResponse
 from app.config import OPENWEATHERMAP_API_KEY, GEMINI_API_KEY
 
 # configuring gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.5-flash")
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 def get_time_of_day():
     hour = datetime.now().hour
@@ -114,13 +113,16 @@ Conversation:
 Assistant:
 """
         #gemini call
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
 
-        # safe response
-        if not response or not response.text:
-            raise Exception("Empty Gemini response")
+        if not response or not getattr(response, "text", None):
+            print("Gemini returned emty response")
+            return generate_human_fallback(mood)
         
-        reply = response.text.strip()
+        reply = response.text.strip() if response.text else ""
 
         #save learning
         learned = ChatResponse(intent=intent, text=reply)

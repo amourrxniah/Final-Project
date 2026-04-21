@@ -3,6 +3,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
   ScrollView,
   Animated,
   LayoutAnimation,
@@ -16,17 +18,16 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
-import BottomNav from "../components/BottomNav";
 import SkeletonCard from "../components/SkeletonCard";
 import { useFavouriteAnimation } from "../components/useFavouriteAnimation";
-import { 
+import {
   getRecommendations,
   getUserActivities,
   addFavourite,
   removeFavourite,
   sendActivityFeedback,
-  logActivityOpen
- } from "../components/api";
+  logActivityOpen,
+} from "../components/api";
 
 /* -------------------- CONFIG -------------------- */
 const ITEMS_PER_PAGE = 5;
@@ -102,6 +103,8 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(0);
+  const [limit, setLimit] = useState(10);
+
   const [visibleCount, setVisibleCount] = useState(3);
 
   const [feedback, setFeedback] = useState({});
@@ -109,7 +112,7 @@ export default function RecommendationsScreen({ route, navigation }) {
 
   const [sortOpen, setSortOpen] = useState(false);
   const [sortMode, setSortMode] = useState("relevance");
-  
+
   const [undoItem, setUndoItem] = useState(null);
 
   const heartRefs = useRef({});
@@ -146,21 +149,19 @@ export default function RecommendationsScreen({ route, navigation }) {
         weather: weather?.condition || "",
         timeOfDay,
         latitude: coords.latitude,
-        longitude: coords.longitude
+        longitude: coords.longitude,
       });
-      
+
       if (!Array.isArray(data)) return setLoading(false);
 
       const mapped = data.map((item) => ({
         ...item,
         distanceNum: item.distance || 0,
-        distance: item.distance 
-          ? (item.distance * 0.621371).toFixed(1) 
-          : "N/A",
+        distance: item.distance ? (item.distance * 0.621371).toFixed(1) : "N/A",
       }));
 
       animatedValues.current = mapped.map(() => new Animated.Value(0));
-      
+
       setActivities(mapped);
       setLoading(false);
 
@@ -176,7 +177,6 @@ export default function RecommendationsScreen({ route, navigation }) {
           ),
         ).start();
       });
-
     } catch (err) {
       console.log("Recommendation load error:", err.message);
     } finally {
@@ -188,7 +188,7 @@ export default function RecommendationsScreen({ route, navigation }) {
   const loadUserState = async () => {
     try {
       const data = await getUserActivities();
-      
+
       const favMap = {};
       const fbMap = {};
 
@@ -200,7 +200,6 @@ export default function RecommendationsScreen({ route, navigation }) {
 
       setFavourites(favMap);
       setFeedback(fbMap);
-
     } catch (err) {
       console.log("Failed loading stored preferences", err);
     }
@@ -261,8 +260,10 @@ export default function RecommendationsScreen({ route, navigation }) {
     }));
 
     try {
-      await sendActivityFeedback(activityId, type);
-
+      await sendActivityFeedback({
+        activityId,
+        feedback: newValue,
+      });
     } catch (err) {
       console.log("Feedback failed", err);
 
@@ -281,12 +282,12 @@ export default function RecommendationsScreen({ route, navigation }) {
     } catch (err) {
       console.log("Log error", err);
     }
-      navigation.navigate("ActivityDetails", { 
-        activity,
-        mood,
-        weather: weather?.condition,
-        rank
-      });
+    navigation.navigate("ActivityDetails", {
+      activity,
+      mood,
+      weather: weather?.condition,
+      rank,
+    });
   };
 
   /* --------------- SORTING --------------- */
@@ -305,6 +306,18 @@ export default function RecommendationsScreen({ route, navigation }) {
   const currentItems = sortedActivities
     .slice(page * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE + ITEMS_PER_PAGE)
     .slice(0, visibleCount);
+
+  // <FlatList
+  //   data={sortedActivities}
+  //   keyExtractor={(item) => item.id.toString()}
+  //   renderItem={renderItem}
+  //   onEndReached={() => loadMore()}
+  //   onEndReachedThreshold={0.5}
+  // />;
+
+  const loadMore = () => {
+    setLimit((prev) => prev + 10);
+  };
 
   const changePage = (next) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -398,7 +411,7 @@ export default function RecommendationsScreen({ route, navigation }) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {currentItems.map((item, index) => {
+            {Array.isArray(currentItems) && currentItems.map((item, index) => {
               const rank = page * ITEMS_PER_PAGE + index + 1;
               const tag = getTagFromCategories(item.category_names || []);
               const state = feedback[item.id];
@@ -412,8 +425,8 @@ export default function RecommendationsScreen({ route, navigation }) {
                         inputRange: [0, 1],
                         outputRange: [20, 0],
                       }) || 0,
-                  }
-                ]
+                  },
+                ],
               };
 
               return (
@@ -551,7 +564,7 @@ export default function RecommendationsScreen({ route, navigation }) {
         )}
 
         {/* AI ASSISTANT */}
-        <AIAssistant mood={mood} />
+        {/* <AIAssistant mood={mood} /> */}
       </View>
 
       <FlyingHeart />
@@ -580,12 +593,12 @@ export default function RecommendationsScreen({ route, navigation }) {
         </View>
       )}
 
-      <BottomNav
+      {/* <BottomNav
         navigation={navigation}
         active="mood"
         favouriteRef={favouritesTargetRef}
         bookmarkPulse={bookmarkPulse}
-      />
+      /> */}
     </View>
   );
 }
@@ -593,7 +606,7 @@ export default function RecommendationsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   content: {

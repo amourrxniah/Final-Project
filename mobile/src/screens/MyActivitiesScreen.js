@@ -14,7 +14,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
-import BottomNav from "../components/BottomNav";
 import { useFocusEffect } from "@react-navigation/native";
 import { getUserActivities, searchActivities } from "../components/api";
 
@@ -59,6 +58,7 @@ export default function MyActivitiesScreen({ navigation }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const bookmarkPulse = useRef(new Animated.Value(1)).current;
 
   const TABS = ["Favourites", "Ratings", "History", "Total"];
 
@@ -78,6 +78,17 @@ export default function MyActivitiesScreen({ navigation }) {
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 6,
+        useNativeDriver: true,
+      }),
+
+      Animated.spring(bookmarkPulse, {
+        toValue: 1.3,
+        friction: 3,
+        useNativeDriver: true,
+      }),
+      Animated.spring(bookmarkPulse, {
+        toValue: 1,
+        friction: 3,
         useNativeDriver: true,
       }),
     ]).start();
@@ -302,7 +313,6 @@ export default function MyActivitiesScreen({ navigation }) {
             />
           </View>
 
-
           {/* SEARCH SUGGESTIONS*/}
           {suggestions.length > 0 && (
             <View style={styles.suggestionsBox}>
@@ -492,7 +502,11 @@ export default function MyActivitiesScreen({ navigation }) {
       <View style={styles.content}>{renderContent()}</View>
       <AIAssistant />
 
-      <BottomNav navigation={navigation} active="favourites" />
+      {/* <BottomNav 
+        navigation={navigation} 
+        active="favourites"
+        bookmarkPulse={bookmarkPulse}
+         /> */}
     </View>
   );
 }
@@ -533,7 +547,7 @@ const EmptyState = () => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   content: {

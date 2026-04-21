@@ -6,7 +6,7 @@ import logging
 
 from app.database import get_db
 from app.models.activity import Activity
-from app.services.geoapify import get_places
+from app.services.foursquare import get_places
 from app.services.scoring import (
     mood_score, 
     weather_score, 
@@ -79,7 +79,7 @@ def recommendations(
                 "title": activity.title,
                 "subtitle": activity.subtitle,
                 "category": activity.categories,
-                "category_names": activity.category_names,
+                "category_names": activity.category_names or [],
                 "distance": round(dist, 2),
                 "rating": activity.rating,
                 "price": activity.price,
@@ -93,8 +93,8 @@ def recommendations(
                 break
 
         # --------------- FETCH FROM API ---------------
-        api_places = get_places(lat=lat, lon=lon, limit=30)
-        logger.info(f"Geoapify returned {len(api_places)} places")
+        api_places = get_places(lat=lat, lon=lon, limit=30) or []
+        logger.info(f"Foursquare returned {len(api_places)} places")
 
         if api_places:
             place_ids = [p["place_id"] for p in api_places if p.get("place_id")]
@@ -146,7 +146,7 @@ def recommendations(
                     activity.rating = place.get("rating") or activity.rating
                     activity.price = place.get("price") or activity.price
                     activity.popularity = place.get("popularity") or activity.popularity
-                    activity.mood = mood,
+                    activity.mood = mood
                     activity.weather = weather
 
                 dist = place.get("distance") or distance_km(

@@ -15,7 +15,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
-import BottomNav from "../components/BottomNav";
 import { getSettings, saveSettings } from "../components/api";
 
 /* -------------------- THEME -------------------- */
@@ -235,7 +234,7 @@ export default function SettingsScreen({ navigation }) {
       </Modal>
 
       <AIAssistant />
-      <BottomNav navigation={navigation} active={"settings"} />
+      {/* <BottomNav navigation={navigation} active={"settings"} /> */}
     </View>
   );
 }
@@ -304,7 +303,7 @@ const NavRow = ({ icon, label, desc, danger, onPress }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   content: {

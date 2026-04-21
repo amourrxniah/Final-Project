@@ -269,7 +269,6 @@ export const getFavouriteState = async (activityId) => {
 /* -------------------- REMOVE FAVOURITE -------------------- */
 export const removeFavourite = async (activityId) => {
   const res = await api.delete(`/favourites/${activityId}`);
-
   return res.data;
 };
 /* -------------------- ACTIVITY FEEDBACK -------------------- */

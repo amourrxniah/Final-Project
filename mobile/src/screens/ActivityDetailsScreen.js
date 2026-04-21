@@ -27,7 +27,6 @@ import ActivityRating from "../components/activity/ActivityRating";
 import ActivitySimilar from "../components/activity/ActivitySimilar";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
-import BottomNav from "../components/BottomNav";
 
 import {
   deriveMeta,
@@ -310,12 +309,12 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         </View>
       )}
 
-      <BottomNav
+      {/* <BottomNav
         navigation={navigation}
         active="mood"
         favouriteRef={favouritesTargetRef}
         bookmarkPulse={bookmarkPulse}
-      />
+      /> */}
     </View>
   );
 }
@@ -329,7 +328,7 @@ const formatDistance = (d) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   content: {

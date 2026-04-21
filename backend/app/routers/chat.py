@@ -17,10 +17,10 @@ class ChatRequest(BaseModel):
     mood: str
     messages: List[Message]
 
-class ChatResponse(BaseModel):
+class ChatAPIResponse(BaseModel):
     reply: str
 
-@router.post("/", response_model=ChatResponse)
+@router.post("/", response_model=ChatAPIResponse)
 def chat(request: ChatRequest):
     
     #save user messages

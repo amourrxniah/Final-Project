@@ -22,7 +22,6 @@ import { BlurView } from "expo-blur";
 import ConfettiCannon from "react-native-confetti-cannon";
 import Toast from "react-native-toast-message";
 
-import BottomNav from "../components/BottomNav";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 
 import {
@@ -485,7 +484,7 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.content}>{renderContent()}</View>
       <Toast />
       <AIAssistant />
-      <BottomNav navigation={navigation} active={"profile"} />
+      {/* <BottomNav navigation={navigation} active={"profile"} /> */}
     </View>
   );
 }
@@ -574,7 +573,7 @@ const MenuItem = ({ text, danger, onPress }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#e9eef6",
   },
 
   content: {

@@ -11,7 +11,7 @@ INDOOR_KEYWORDS = [
     "gallery", "mall", "fitness", "gym"
 ]
 
-OUTDOOT_KEYWORDS = [
+OUTDOOR_KEYWORDS = [
     "park", "nature", "trail", "beach", "stadium"
 ]
 
@@ -49,14 +49,13 @@ def weather_score(weather: str, categories: list):
         c = c.lower()
         if bad_weather and any(k in c for k in INDOOR_KEYWORDS):
             matches += 1
-        if not bad_weather and any(k in c for k in OUTDOOT_KEYWORDS):
+        if not bad_weather and any(k in c for k in OUTDOOR_KEYWORDS):
             matches += 1
 
     if matches == 0:
         return 0.3
     
     return min(1.0, 0.6 + (matches * 0.2))
-    return 0.7
 
 def distance_score(distance_km: float, max_km: float = 5.0):
     if distance_km <= 0:
@@ -125,3 +124,4 @@ def total_score(
         (distance_sc * 0.25) + 
         (time_sc * 0.15) + 
         (price_sc * 0.10))
+
