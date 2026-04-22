@@ -34,17 +34,18 @@ export default function DetectedContextScreen({ navigation }) {
 
   /* -------------------- INIT -------------------- */
   useEffect(() => {
-    detectTime();
-    detectContext();
+    const currentTime = detectTime();
+    setTimeOfDay(currentTime);
+    detectContext(currentTime);
   }, []);
 
   /* -------------------- TIME -------------------- */
   const detectTime = () => {
     const hour = new Date().getHours();
 
-    if (hour >= 5 && hour < 11) return "morning";
-    if (hour < 16) return "afternoon";
-    if (hour < 21) return "evening";
+    if (hour >= 5 && hour < 12) return "morning";
+    if (hour >= 12 && hour < 17) return "afternoon";
+    if (hour >= 17 && hour < 21) return "evening";
     return "night";
   };
 

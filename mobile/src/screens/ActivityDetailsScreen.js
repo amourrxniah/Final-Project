@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Share,
+  Animated
 } from "react-native";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
@@ -16,6 +17,7 @@ import {
   sendActivityFeedback,
   getActivityFeedback,
   logActivityOpen,
+  trackInteraction,
 } from "../components/api";
 
 import { useFavouriteAnimation } from "../components/useFavouriteAnimation";
@@ -44,17 +46,23 @@ const getHeroTheme = (categories = []) => {
   if (joined.includes("museum") || joined.includes("gallery"))
     return {
       label: "Cultural",
-      icon: "bank",
-      gradient: ["#8e24aa", "#ce93d8"],
+      icon: "bank-outline",
+      gradient: ["#7f7fd5", "#86a8e7", "#91eae4"],
     };
-  if (joined.includes("park"))
+  if (joined.includes("park") || joined.includes("nature"))
     return {
       label: "Relaxing",
-      icon: "tree",
-      gradient: ["#66bb6a", "#c8e6c9"],
+      icon: "tree-outline",
+      gradient: ["#56ab2f", "#a8e063"],
+    };
+  if (joined.includes("cafe") || joined.includes("restaurant"))
+    return {
+      label: "Social Spot",
+      icon: "coffee-outline",
+      gradient: ["#ff9966", "#ff5e62"],
     };
   return {
-    label: "Nearby",
+    label: "Explore",
     icon: "map-marker",
     gradient: ["#b36bff", "#ff4fa3"],
   };
@@ -95,7 +103,6 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       setIsFav(fav?.is_favourite || false);
 
       const feedback = await getActivityFeedback(activity.id);
-
       setRating(feedback?.rating || 0);
       setHelpfulState(feedback?.feedback || null);
 
@@ -107,16 +114,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      let isActive = true;
-      const load = async () => {
-        if (!isActive) return;
-        await loadUserState();
-      };
-
-      load();
-      return () => {
-        isActive = false;
-      };
+      loadUserState();
     }, [activity.id]),
   );
 
@@ -136,22 +134,37 @@ export default function ActivityDetailsScreen({ route, navigation }) {
     }
 
     //animation
-    if (!heartRef.current || !favouritesTargetRef.current) return;
-
-    heartRef.current.measureInWindow((sx, sy, sw, sh) => {
-      favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
-        animateToTarget(
-          { x: sx + sw / 2 - 15, y: sy + sh / 2 - 15 },
-          { x: ex + ew / 2 - 15, y: ey + eh / 2 - 15 },
-        );
+    if (!heartRef.current && favouritesTargetRef.current) {
+      heartRef.current.measureInWindow((sx, sy, sw, sh) => {
+        favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
+          animateToTarget(
+            { x: sx + sw / 2 - 15, y: sy + sh / 2 - 15 },
+            { x: ex + ew / 2 - 15, y: ey + eh / 2 - 15 },
+          );
+        });
       });
-    });
+    }
 
     try {
       if (newState) {
         await addFavourite(activity.id);
+
+        await trackInteraction({
+          type: "favourite",
+          activityId: activity.id,
+          mood,
+          rank: safeRank,
+          timestamp: new Date().toISOString(),
+        });
       } else {
         await removeFavourite(activity.id);
+
+        await trackInteraction({
+          type: "unfavourite",
+          activityId: activity.id,
+          mood,
+          timestamp: new Date().toISOString(),
+        });
       }
 
       //auto hide undo after 5 seconds
@@ -172,6 +185,15 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         activityId: activity.id,
         rating: value,
       });
+
+      await trackInteraction({
+        type: "rating",
+        activityId: activity.id,
+        value,
+        mood,
+        rank: safeRank,
+        timestamp: new Date().toISOString(),
+      });
     } catch (err) {
       console.log("Rating save failed", err?.data || err.message);
       setRating(previous);
@@ -189,6 +211,14 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         activityId: activity.id,
         feedback: newValue,
       });
+
+      await trackInteraction({
+        type: "feedback",
+        activityId: activity.id,
+        value: newValue,
+        mood,
+        timestamp: new Date().toISOString(),
+      });
     } catch (err) {
       console.log("Helpful save error", err);
       setHelpfulState(previous);
@@ -201,6 +231,13 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       await Share.share({
         title: activity.title,
         message: `🌟 Check out this activity: ${activity.title}\n\n${activity.subtitle}\n\nRecommended by MoodSync`,
+      });
+
+      await trackInteraction({
+        type: "share",
+        activityId: activity.id,
+        mood,
+        timestamp: new Date().toISOString(),
       });
     } catch (err) {
       console.log("Share error", err.message);
@@ -302,19 +339,19 @@ export default function ActivityDetailsScreen({ route, navigation }) {
               setIsFav(false);
               setUndoItem(null);
               await removeFavourite(undoItem.id);
+
+              await trackInteraction({
+                type: "undo_favourite",
+                activityId: undoItem.id,
+                mood,
+                timestamp: new Date().toISOString(),
+              });
             }}
           >
             <Text style={styles.undoBtn}>Undo</Text>
           </TouchableOpacity>
         </View>
       )}
-
-      {/* <BottomNav
-        navigation={navigation}
-        active="mood"
-        favouriteRef={favouritesTargetRef}
-        bookmarkPulse={bookmarkPulse}
-      /> */}
     </View>
   );
 }

@@ -7,6 +7,7 @@ import RecommendationsScreen from "./src/screens/RecommendationsScreen";
 import MyActivitiesScreen from "./src/screens/MyActivitiesScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
+import ActivityDetailsScreen from "./src/screens/ActivityDetailsScreen";
 
 const Tab = createBottomTabNavigator();
 

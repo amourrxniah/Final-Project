@@ -42,7 +42,11 @@ export default function App() {
           <Stack.Screen name="ManualSignup" component={ManualSignupScreen} />
 
           {/* main app screens */}
-          <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen
+            name="MainTabs"
+            component={MainTabs}
+            options={{ headerShown: false }}
+          />
 
           {/* other screens */}
           <Stack.Screen
@@ -50,9 +54,13 @@ export default function App() {
             component={DetectedContextScreen}
           />
           <Stack.Screen name="Overview" component={OverviewScreen} />
+
           <Stack.Screen
             name="ActivityDetails"
             component={ActivityDetailsScreen}
+            options={{
+              presentation: "modal",
+            }}
           />
           <Stack.Screen name="Accounts" component={ConnectedAccountsScreen} />
         </Stack.Navigator>

@@ -9,7 +9,7 @@ import {
   Platform,
   UIManager,
 } from "react-native";
-import React, { useEffect, useState, useRef, act } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import * as Location from "expo-location";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -112,8 +112,15 @@ export default function RecommendationsScreen({ navigation }) {
   const [sortMode, setSortMode] = useState("relevance");
   const [visibleCount, setVisibleCount] = useState(3);
 
+  const [showMoodPopup, setShowMoodPopup] = useState(false);
+
   /* --------------- INITIAL LOAD --------------- */
   useEffect(() => {
+    if (!mood) {
+      setShowMoodPopup(true);
+      setLoading(false);
+      return;
+    }
     loadRecommendations();
   }, []);
 
@@ -159,27 +166,31 @@ export default function RecommendationsScreen({ navigation }) {
 
   /* --------------- OPEN ACTIVITY --------------- */
   const openActivity = async (activity, rank) => {
-    try {
-      await logActivityOpen(activity.id);
-
-      // feed user engine
-      await trackInteraction({
-        type: "click",
-        activityId: activity.id,
-        categories: activity.category_names || [],
-        mood,
-        timeOfDay,
-        rank,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.log("Log error", err);
-    }
-    navigation.navigate("ActivityDetails", {
+    navigation.getParent()?.navigate("ActivityDetails", {
       activity,
       mood,
       weather: weather?.condition,
       rank,
+      allActivities: activities,
+    });
+    //
+
+    // run tracking in background
+    requestAnimationFrame(async () => {
+      try {
+        logActivityOpen(activity.id);
+        trackInteraction({
+          type: "click",
+          activityId: activity.id,
+          categories: activity.category_names || [],
+          mood,
+          timeOfDay,
+          rank,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.log("Log error", err);
+      }
     });
   };
 
@@ -403,9 +414,28 @@ export default function RecommendationsScreen({ navigation }) {
             )}
           </ScrollView>
         )}
+        {showMoodPopup && (
+          <View style={styles.popupOverlay}>
+            <View style={styles.popup}>
+              <Text style={styles.popupTitle}>No mood selected</Text>
+              <Text style={styles.popupText}>
+                Log your mood first so we can personalise your recommendations.
+              </Text>
+              <TouchableOpacity
+                style={styles.popupBtn}
+                onPress={() => {
+                  setShowMoodPopup(false);
+                  navigation.navigate("MoodInput");
+                }}
+              >
+                <Text style={styles.popupBtnText}>Go to Mood Log</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* AI ASSISTANT */}
-        {/* <AIAssistant mood={mood} /> */}
+        <AIAssistant mood={mood} />
       </View>
     </View>
   );
@@ -696,5 +726,49 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginVertical: 8,
     color: "#555",
+  },
+
+  popupOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+  },
+
+  popup: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+  },
+
+  popupTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+
+  popupText: {
+    textAlign: "center",
+    color: "#666",
+    marginBottom: 16,
+  },
+
+  popupBtn: {
+    backgroundColor: "#6b5cff",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+
+  popupBtnText: {
+    color: "#fff",
+    fontWeight: "700",
   },
 });
