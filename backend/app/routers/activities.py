@@ -105,17 +105,17 @@ def get_my_activities(
             "description": a.subtitle,
 
             "category_names": a.category_names,
-            "categories": (a.category_names or ["other"])[0],
+            "category": (a.category_names or ["other"])[0],
 
             "latitude": a.latitude,
             "longitude": a.longitude,
 
             "price": a.price,
-            "rating": fb.rating if fb and fb.rating else a.rating,
+            "rating": fb.rating if fb and fb.rating is not None else a.rating,
 
             # user state
             "is_favourite": is_favourite,
-            "is_helpful": is_liked,
+            "is_liked": is_liked,
             "not_for_me": is_disliked,
             "is_done": is_done,
             "completed_at": done_map[a.id].timestamp if is_done else None,

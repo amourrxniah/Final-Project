@@ -53,14 +53,16 @@ export default function MyActivitiesScreen({ navigation }) {
   const [suggestions, setSuggestions] = useState([]);
   const [trending, setTrending] = useState([]);
 
-  const [activeTab, setActiveTab] = useState("Favourites");
+  const [activeTab, setActiveTab] = useState("Total");
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const bookmarkPulse = useRef(new Animated.Value(1)).current;
 
-  const TABS = ["Favourites", "Ratings", "History", "Total"];
+  const TABS = ["Total", "Favourites", "Ratings", "History"];
+
+  const displayActivities = filteredActivities || [];
 
   useFocusEffect(
     React.useCallback(() => {
@@ -119,10 +121,10 @@ export default function MyActivitiesScreen({ navigation }) {
 
   const updateStats = (list) => {
     setStats({
-      favourites: list.filter((a) => a.is_favourite).length,
-      liked: list.filter((a) => a.is_helpful).length,
-      disliked: list.filter((a) => a.not_for_me).length,
-      done: list.filter((a) => a.is_done).length,
+      favourites: list.filter((a) => a?.is_favourite).length,
+      liked: list.filter((a) => a?.is_liked).length,
+      disliked: list.filter((a) => a?.not_for_me).length,
+      done: list.filter((a) => a?.is_done).length,
       total: list.length,
     });
   };
@@ -131,7 +133,7 @@ export default function MyActivitiesScreen({ navigation }) {
   const getScore = (a) =>
     (a.is_done ? 3 : 0) +
     (a.is_favourite ? 2 : 0) +
-    (a.is_helpful ? 1 : 0) -
+    (a.is_liked ? 1 : 0) -
     (a.not_for_me ? 1 : 0) +
     (a.rating || 0);
 
@@ -150,7 +152,7 @@ export default function MyActivitiesScreen({ navigation }) {
     if (item.is_done) return "check-circle-outline";
     if (item.is_favourite) return "heart-outline";
     if (item.rating) return "star-outline";
-    if (item.is_helpful) return "thumb-up-outline";
+    if (item.is_liked) return "thumb-up-outline";
     if (item.not_for_me) return "thumb-down-outline";
     return "compass-outline"; // clean default
   };
@@ -210,8 +212,7 @@ export default function MyActivitiesScreen({ navigation }) {
 
       case "Ratings":
         list = list.filter(
-          (a) =>
-            a?.is_helpful || a?.not_for_me || typeof a?.rating === "number",
+          (a) => a?.is_liked || a?.not_for_me || typeof a?.rating === "number",
         );
         break;
 
@@ -303,7 +304,7 @@ export default function MyActivitiesScreen({ navigation }) {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
         >
           {/* SEARCH */}
           <View style={styles.searchBox}>
@@ -328,7 +329,7 @@ export default function MyActivitiesScreen({ navigation }) {
                     onPress={() => handleSelect(item)}
                   >
                     <LinearGradient
-                      colors={["#b36bff", "#ff4fa3"]}
+                      colors={["#d3cce3", "#c9d6ff"]}
                       style={styles.trendingGradient}
                     >
                       <MaterialCommunityIcons
@@ -440,10 +441,10 @@ export default function MyActivitiesScreen({ navigation }) {
           </View>
 
           {/* ACTIVITY CARDS */}
-          {!filteredActivities || filteredActivities.length === 0 ? (
+          {displayActivities.length === 0 ? (
             <EmptyState />
           ) : (
-            filteredActivities.map((item) => (
+            displayActivities.map((item) => (
               <Animated.View
                 key={item.id}
                 style={{
@@ -500,7 +501,7 @@ export default function MyActivitiesScreen({ navigation }) {
                       )}
 
                       {/* LIKE / DISLIKE */}
-                      {item.is_helpful && (
+                      {item.is_liked && (
                         <MaterialCommunityIcons
                           name="thumb-up"
                           size={16}
