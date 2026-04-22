@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Share,
-  Animated
+  Animated,
 } from "react-native";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
@@ -27,6 +27,7 @@ import ActivityHero from "../components/activity/ActivityHero";
 import ActivityInfoCard from "../components/activity/ActivityInfoCard";
 import ActivityRating from "../components/activity/ActivityRating";
 import ActivitySimilar from "../components/activity/ActivitySimilar";
+import QuickActions from "../components/activity/QuickActions";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 
@@ -37,6 +38,7 @@ import {
   deriveBenefits,
   deriveTips,
   findSimilarActivities,
+  getConfidenceScore,
 } from "../components/ActivityDerivation";
 
 /* -------------------- HERO THEME -------------------- */
@@ -72,6 +74,15 @@ export default function ActivityDetailsScreen({ route, navigation }) {
   const { activity, allActivities = [], mood, weather, rank } = route.params;
   const safeRank = rank ?? 1;
 
+  /* ---------- ANIMATION ---------- */
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const heroScale = scrollY.interpolate({
+    inputRange: [-100, 0, 200],
+    outputRange: [1.1, 1, 0.95],
+    extrapolate: "clamp",
+  });
+
   /* ---------- DERIVED CONTENT ---------- */
   const meta = deriveMeta(activity);
   const tags = deriveTags(activity.category_names);
@@ -79,6 +90,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
   const benefits = deriveBenefits(activity.category_names);
   const tips = deriveTips(activity.category_names);
   const similar = findSimilarActivities(activity, allActivities);
+  const confidence = getConfidenceScore(activity, mood) || 50;
 
   /* ---------- HERO ---------- */
   const hero = getHeroTheme(activity.category_names);
@@ -88,8 +100,9 @@ export default function ActivityDetailsScreen({ route, navigation }) {
   const [undoItem, setUndoItem] = useState(null);
   const [rating, setRating] = useState(0);
   const [helpfulState, setHelpfulState] = useState(null);
+  const [feedbackMsg, setFeedbackMsg] = useState(null);
 
-  /* ---------- ANIMATION ---------- */
+  /* ---------- REFS ---------- */
   const heartRef = useRef(null);
   const favouritesTargetRef = useRef(null);
 
@@ -149,7 +162,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       if (newState) {
         await addFavourite(activity.id);
 
-        await trackInteraction({
+        trackInteraction({
           type: "favourite",
           activityId: activity.id,
           mood,
@@ -159,7 +172,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       } else {
         await removeFavourite(activity.id);
 
-        await trackInteraction({
+        trackInteraction({
           type: "unfavourite",
           activityId: activity.id,
           mood,
@@ -186,7 +199,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         rating: value,
       });
 
-      await trackInteraction({
+      trackInteraction({
         type: "rating",
         activityId: activity.id,
         value,
@@ -194,6 +207,9 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         rank: safeRank,
         timestamp: new Date().toISOString(),
       });
+
+      setFeedbackMsg("Got it — we'll improve your future recommendations ✨");
+      setTimeout(() => setFeedbackMsg(null), 3000);
     } catch (err) {
       console.log("Rating save failed", err?.data || err.message);
       setRating(previous);
@@ -212,7 +228,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         feedback: newValue,
       });
 
-      await trackInteraction({
+      trackInteraction({
         type: "feedback",
         activityId: activity.id,
         value: newValue,
@@ -233,7 +249,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         message: `🌟 Check out this activity: ${activity.title}\n\n${activity.subtitle}\n\nRecommended by MoodSync`,
       });
 
-      await trackInteraction({
+      trackInteraction({
         type: "share",
         activityId: activity.id,
         mood,
@@ -261,12 +277,17 @@ export default function ActivityDetailsScreen({ route, navigation }) {
           contentContainerStyle={{ paddingBottom: 120 }}
         >
           {/* HERO CARD + DETAILS */}
-          <ActivityHero
-            activity={activity}
-            hero={hero}
-            meta={meta}
-            tags={tags}
-          />
+          <Animated.View style={{ transform: [{ scale: heroScale }] }}>
+            <ActivityHero
+              activity={activity}
+              hero={hero}
+              meta={meta}
+              tags={tags}
+              confidence={confidence}
+            />
+          </Animated.View>
+
+          <QuickActions activity={activity} />
 
           <ActivityInfoCard
             icon="trophy"
@@ -315,6 +336,8 @@ export default function ActivityDetailsScreen({ route, navigation }) {
             helpfulState={helpfulState}
             handleHelpful={handleHelpful}
           />
+
+          {feedbackMsg && <Text style={styles.feedback}>{feedbackMsg}</Text>}
         </ScrollView>
       </View>
 
@@ -340,7 +363,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
               setUndoItem(null);
               await removeFavourite(undoItem.id);
 
-              await trackInteraction({
+              trackInteraction({
                 type: "undo_favourite",
                 activityId: undoItem.id,
                 mood,

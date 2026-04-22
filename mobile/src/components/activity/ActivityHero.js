@@ -3,10 +3,17 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import ActivityMeta from "./ActivityMeta";
 
-export default function ActivityHero({ activity, hero, meta, tags }) {
+export default function ActivityHero({
+  activity,
+  hero,
+  meta,
+  tags,
+  confidence,
+}) {
   return (
     <View style={styles.combinedCard}>
       <LinearGradient colors={hero.gradient} style={styles.heroTop}>
+        <Text style={styles.confidence}>🔥 {confidence}% match</Text>
         <MaterialCommunityIcons name={hero.icon} size={70} color="#fff" />
 
         <View style={styles.categoryBubble}>

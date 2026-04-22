@@ -44,24 +44,24 @@ def track_interaction(data: dict, db: Session = Depends(get_db)):
             update_weight(db, user_id, "category", c.lower(), +1.0)
 
         if mood:
-            update_weight(db, user_id, "mood", c.lower(), +0.5)
+            update_weight(db, user_id, "mood", mood.lower(), +0.5)
 
         if time_of_day:
-            update_weight(db, user_id, "time", c.lower(), +0.3)
+            update_weight(db, user_id, "time", time_of_day.lower(), +0.3)
 
     # ----- SKIP -----
-    elif interaction_type == "click":
+    elif interaction_type == "skip":
         activities = data.get("activities", [])
         categories = data.get("categories", [])
         mood = data.get("mood")
 
-        for a in activities:
-            for c in categories:
-                update_weight(db, user_id, "category", c.lower(), -0.2)
+        for c in categories:
+            update_weight(db, user_id, "category", c.lower(), -0.2)
 
-            if mood:
-                update_weight(db, user_id, "mood", mood, -0.1)
+        if mood:
+            update_weight(db, user_id, "mood", mood.lower(), -0.1)
 
+    db.flush()
     db.commit()
 
 

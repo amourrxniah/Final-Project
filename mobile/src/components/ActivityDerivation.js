@@ -144,3 +144,17 @@ export const findSimilarActivities = (current, all) => {
     .sort((a, b) => b.score - a.score)
     .slice(0, 3);
 };
+
+export const getConfidenceScore = (activity, mood) => {
+  const popularity = Number(activity?.popularity);
+
+  // fallback if missing
+  const safePopularity = isNaN(popularity) ? 0.5 : popularity;
+
+  let score = safePopularity * 70;
+
+  if (mood === "high") score += 20;
+  if (mood === "low") score += 10;
+
+  return Math.min(100, Math.round(score));
+};

@@ -5,15 +5,20 @@ export default function QuickActions({ activity }) {
   return (
     <View style={styles.row}>
       <Action icon="play" label="Start" />
+      <Action icon="bookmark" label="Save" />
+      <Action icon="navigate" label="Go" />
+      <Action icon="share-social" label="Share" />
     </View>
   );
 }
 
 const Action = ({ icon, label }) => {
-  <TouchableOpacity>
-    <Ionicons />
-    <Text></Text>
-  </TouchableOpacity>;
+  return (
+    <TouchableOpacity style={styles.btn}>
+      <Ionicons name={icon} size={20} />
+      <Text>{label}</Text>
+    </TouchableOpacity>
+  );
 };
 
 const styles = StyleSheet.create({
