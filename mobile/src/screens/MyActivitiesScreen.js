@@ -131,13 +131,12 @@ export default function MyActivitiesScreen({ navigation }) {
   const getScore = (a) =>
     (a.is_done ? 3 : 0) +
     (a.is_favourite ? 2 : 0) +
-    (a.is_helpful ? 1 : 0) +
+    (a.is_helpful ? 1 : 0) -
     (a.not_for_me ? 1 : 0) +
     (a.rating || 0);
 
   const getRank = (item) => {
     const sorted = [...activities].sort((a, b) => getScore(b) - getScore(a));
-
     return sorted.findIndex((a) => a.id === item.id) + 1;
   };
 
@@ -199,27 +198,25 @@ export default function MyActivitiesScreen({ navigation }) {
 
   /* ------------------- FILTER ------------------- */
   const filteredActivities = useMemo(() => {
-    if (!activities || activities.length === 0) return [];
+    if (!Array.isArray(activities)) return [];
 
     let list = [...activities];
 
     // tab filter
     switch (activeTab) {
       case "Favourites":
-        list = list.filter((a) => a?.is_favourite === true);
+        list = list.filter((a) => a?.is_favourite);
         break;
 
       case "Ratings":
         list = list.filter(
           (a) =>
-            a?.is_helpful === true ||
-            a?.not_for_me === true ||
-            (a?.rating !== null && a?.rating !== undefined),
+            a?.is_helpful || a?.not_for_me || typeof a?.rating === "number",
         );
         break;
 
       case "History":
-        list = list.filter((a) => a?.is_done === true);
+        list = list.filter((a) => a?.is_done);
         break;
 
       case "Total":
@@ -232,6 +229,7 @@ export default function MyActivitiesScreen({ navigation }) {
       const lower = search.toLowerCase();
       list = list.filter((a) => a?.title?.toLowerCase().includes(lower));
     }
+
     return list;
   }, [activities, activeTab, search]);
 
@@ -318,6 +316,38 @@ export default function MyActivitiesScreen({ navigation }) {
               onChangeText={setSearch}
             />
           </View>
+
+          {trending.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>🔥 Trending Now</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {trending.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.trendingCard}
+                    onPress={() => handleSelect(item)}
+                  >
+                    <LinearGradient
+                      colors={["#b36bff", "#ff4fa3"]}
+                      style={styles.trendingGradient}
+                    >
+                      <MaterialCommunityIcons
+                        name={getActivityIcon(item)}
+                        size={24}
+                        color="#fff"
+                      />
+
+                      <Text style={styles.trendingCardText}>{item.title}</Text>
+
+                      <Text style={{ fontSize: 10, color: "#fff" }}>
+                        🔥 {Math.round(item.trending_score)}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
 
           {/* SEARCH SUGGESTIONS*/}
           {suggestions.length > 0 && (
@@ -456,7 +486,7 @@ export default function MyActivitiesScreen({ navigation }) {
                     {/* RIGHT SUMMARY */}
                     <View style={styles.summaryRow}>
                       {/* RATING BUBBLE */}
-                      {item.rating !== null && (
+                      {typeof item.rating === "number" && (
                         <View style={styles.rating}>
                           <MaterialCommunityIcons
                             name="star"

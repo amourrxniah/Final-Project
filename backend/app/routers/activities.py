@@ -35,30 +35,28 @@ def get_my_activities(
     db: Session = Depends(get_db), 
     user=Depends(get_current_user)
 ):
-    activities = db.query(Activity).all()
-
-    # get user interaction IDs
-    fav_ids = {
-        f.activity_id 
-        for f in db.query(Favourite)
-        .filter(Favourite.user_id == user.id)
-    }
-
+    # user data
+    favs = db.query(Favourite).filter(
+        Favourite.user_id == user.id).all()
     logs = db.query(ActivityLog).filter(
-        ActivityLog.user_id == user.id
-    ).all()
-
-    done_map = {l.activity_id: l for l in logs}
-
+        ActivityLog.user_id == user.id).all()
     feedbacks = db.query(Feedback).filter(
-        Feedback.user_id == user.id
+        Feedback.user_id == user.id).all()
+    
+    fav_ids = {f.activity_id for f in favs}
+    done_map = {l.activity_id: l for l in logs}
+    feedback_map = {f.activity_id for f in feedbacks}
+
+    # only interacted ids
+    interacted_ids = set(fav_ids) | set(done_map.keys()) | set(feedback_map.keys())
+
+    if not interacted_ids:
+        return []
+    
+    activities = db.query(Activity).filter(
+        Activity.id.in_(interacted_ids)
     ).all()
-
-    feedback_map = {
-        f.activity_id: f 
-        for f in feedbacks
-    }
-
+    
     # global data for trending
     all_favs = db.query(Favourite).all()
     all_logs = db.query(ActivityLog).all()
@@ -72,7 +70,7 @@ def get_my_activities(
         fav_count_map[f.activity_id] = fav_count_map.get(f.activity_id, 0) + 1
     
     for l in all_logs:
-        done_count_map[l.activity_id] = done_count_map.get(f.activity_id, 0) + 1
+        done_count_map[l.activity_id] = done_count_map.get(l.activity_id, 0) + 1
     
     for fb in all_feedback:
         if fb.rating:
