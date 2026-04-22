@@ -96,6 +96,8 @@ export default function MyActivitiesScreen({ navigation }) {
 
   const fetchData = async () => {
     try {
+      setActivities([]);
+
       const data = await getUserActivities();
       const list = data || [];
 
@@ -103,11 +105,11 @@ export default function MyActivitiesScreen({ navigation }) {
       updateStats(list);
 
       // trending = most interacted
-      const sorted = [...list].sort(
-        (a, b) =>
-          (b.is_done ? 1 : 0) + (b.is_favourite ? 1 : 0) + (b.rating || 0),
-      );
-      setTrending(sorted.slice(0, 5));
+      const trendingSorted = [...list]
+        .sort((a, b) => (b.trending_score || 0) - (a.trending_score || 0))
+        .slice(0, 6);
+
+      setTrending(trendingSorted);
     } catch (err) {
       console.log("Fetch error", err.response?.data || err.message);
     } finally {
@@ -126,16 +128,15 @@ export default function MyActivitiesScreen({ navigation }) {
   };
 
   /* ------------------- RANK ------------------- */
+  const getScore = (a) =>
+    (a.is_done ? 3 : 0) +
+    (a.is_favourite ? 2 : 0) +
+    (a.is_helpful ? 1 : 0) +
+    (a.not_for_me ? 1 : 0) +
+    (a.rating || 0);
+
   const getRank = (item) => {
-    const sorted = [...activities].sort(
-      (a, b) =>
-        (b.is_done ? 1 : 0) +
-        (b.is_favourite ? 1 : 0) +
-        (b.rating || 0) -
-        (a.is_done ? 1 : 0) +
-        (a.is_favourite ? 1 : 0) +
-        (a.rating || 0),
-    );
+    const sorted = [...activities].sort((a, b) => getScore(b) - getScore(a));
 
     return sorted.findIndex((a) => a.id === item.id) + 1;
   };
@@ -198,34 +199,41 @@ export default function MyActivitiesScreen({ navigation }) {
 
   /* ------------------- FILTER ------------------- */
   const filteredActivities = useMemo(() => {
+    if (!activities || activities.length === 0) return [];
+
     let list = [...activities];
 
+    // tab filter
     switch (activeTab) {
       case "Favourites":
-        return list.filter((a) => a.is_favourite);
+        list = list.filter((a) => a?.is_favourite === true);
+        break;
 
       case "Ratings":
-        return list.filter(
+        list = list.filter(
           (a) =>
-            a.is_helpful ||
-            a.not_for_me ||
-            (a.rating !== null && a.rating !== undefined),
+            a?.is_helpful === true ||
+            a?.not_for_me === true ||
+            (a?.rating !== null && a?.rating !== undefined),
         );
+        break;
 
       case "History":
-        return list.filter(
-          (a) =>
-            a.is_done ||
-            (search && a.title.toLowerCase().includes(search.toLowerCase())),
-        );
+        list = list.filter((a) => a?.is_done === true);
+        break;
 
       case "Total":
-        return list;
-
       default:
-        return list;
+        break;
     }
-  }, [activities, activeTab]);
+
+    // apply search on top
+    if (search.trim()) {
+      const lower = search.toLowerCase();
+      list = list.filter((a) => a?.title?.toLowerCase().includes(lower));
+    }
+    return list;
+  }, [activities, activeTab, search]);
 
   /* ------------------- CLICK HANDLER ------------------- */
   const handleSelect = (item) => {
@@ -339,7 +347,7 @@ export default function MyActivitiesScreen({ navigation }) {
               value={
                 stats.liked +
                 stats.disliked +
-                activities.filter((a) => a.rating != null).length
+                (activities || []).filter((a) => a.rating != null).length
               }
               icon="thumb-up-outline"
               iconGradient={["#ffb703", "#ffd166"]}
@@ -402,7 +410,7 @@ export default function MyActivitiesScreen({ navigation }) {
           </View>
 
           {/* ACTIVITY CARDS */}
-          {filteredActivities.length === 0 ? (
+          {!filteredActivities || filteredActivities.length === 0 ? (
             <EmptyState />
           ) : (
             filteredActivities.map((item) => (
@@ -761,7 +769,7 @@ const styles = StyleSheet.create({
 
   slider: {
     position: "absolute",
-    width: "27%",
+    width: "25%",
     top: 6,
     bottom: 6,
     backgroundColor: "#fff",
