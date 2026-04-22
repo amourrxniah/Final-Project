@@ -72,12 +72,19 @@ def get_my_activities(
             "title": activity.title,
             "description": activity.subtitle,
 
+            "category_names": activity.category_names,
+            "categories": activity.categories,
+
+            "latitude": activity.latitude,
+            "longitude": activity.longitude,
+
+            "price": activity.price,
+            "rating": feedback.rating if feedback else activity.rating,
+
+            # user state
             "is_favourite": is_favourite,
             "is_helpful": is_liked,
             "not_for_me": is_disliked,
-
-            "rating": feedback.rating if feedback else None,
-
             "is_done": is_done,
         })
 

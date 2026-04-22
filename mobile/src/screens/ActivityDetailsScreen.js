@@ -27,7 +27,6 @@ import ActivityHero from "../components/activity/ActivityHero";
 import ActivityInfoCard from "../components/activity/ActivityInfoCard";
 import ActivityRating from "../components/activity/ActivityRating";
 import ActivitySimilar from "../components/activity/ActivitySimilar";
-import QuickActions from "../components/activity/QuickActions";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 
@@ -286,8 +285,6 @@ export default function ActivityDetailsScreen({ route, navigation }) {
               confidence={confidence}
             />
           </Animated.View>
-
-          <QuickActions activity={activity} />
 
           <ActivityInfoCard
             icon="trophy"

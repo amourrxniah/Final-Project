@@ -105,12 +105,7 @@ export default function MyActivitiesScreen({ navigation }) {
       // trending = most interacted
       const sorted = [...list].sort(
         (a, b) =>
-          (b.is_done ? 1 : 0) +
-          (b.is_favourite ? 1 : 0) +
-          (b.rating || 0) -
-          (a.is_done ? 1 : 0) +
-          (a.is_favourite ? 1 : 0) +
-          (a.rating || 0),
+          (b.is_done ? 1 : 0) + (b.is_favourite ? 1 : 0) + (b.rating || 0),
       );
       setTrending(sorted.slice(0, 5));
     } catch (err) {
@@ -238,7 +233,10 @@ export default function MyActivitiesScreen({ navigation }) {
     setSuggestions([]);
 
     navigation.push("ActivityDetails", {
-      activity: item,
+      activity: {
+        ...item,
+        category_names: item.category_names || [],
+      },
       onUpdate: updateActivityLocal,
       allActivities: activities,
       mood: null,
@@ -319,7 +317,7 @@ export default function MyActivitiesScreen({ navigation }) {
               {suggestions.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  onPress={() => handleSearchSelect(item)}
+                  onPress={() => handleSelect(item)}
                 >
                   <Text style={styles.suggestionText}>{item.title}</Text>
                 </TouchableOpacity>
@@ -442,7 +440,9 @@ export default function MyActivitiesScreen({ navigation }) {
                     {/* MAIN CONTENT */}
                     <View style={styles.cardContent}>
                       <Text style={styles.cardTitle}>{item.title}</Text>
-                      <Text style={styles.cardDesc}>{item.description}</Text>
+                      <Text style={styles.cardDesc}>
+                        {item.subtitle || item.description}
+                      </Text>
                     </View>
 
                     {/* RIGHT SUMMARY */}
