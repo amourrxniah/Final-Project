@@ -45,10 +45,10 @@ def get_my_activities(
     
     fav_ids = {f.activity_id for f in favs}
     done_map = {l.activity_id: l for l in logs}
-    feedback_map = {f.activity_id for f in feedbacks}
+    feedback_map = {f.activity_id: f for f in feedbacks}
 
     # only interacted ids
-    interacted_ids = set(fav_ids) | set(done_map.keys()) | set(feedback_map.keys())
+    interacted_ids = fav_ids | set(done_map.keys()) | set(feedback_map.keys())
 
     if not interacted_ids:
         return []
