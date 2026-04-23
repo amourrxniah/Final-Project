@@ -113,6 +113,7 @@ export default function RecommendationsScreen({ navigation }) {
   const [visibleCount, setVisibleCount] = useState(3);
 
   const [showMoodPopup, setShowMoodPopup] = useState(false);
+  const detectedTime = getTimeOfDay();
 
   /* --------------- INITIAL LOAD --------------- */
   useEffect(() => {
@@ -142,7 +143,7 @@ export default function RecommendationsScreen({ navigation }) {
       const data = await getRecommendations({
         mood,
         weather: weather?.condition || "",
-        timeOfDay,
+        timeOfDay: detectedTime,
         latitude: coords.latitude,
         longitude: coords.longitude,
       });
@@ -184,7 +185,7 @@ export default function RecommendationsScreen({ navigation }) {
           activityId: activity.id,
           categories: activity.category_names || [],
           mood,
-          timeOfDay,
+          timeOfDay: timeOfDay,
           rank,
           timestamp: new Date().toISOString(),
         });

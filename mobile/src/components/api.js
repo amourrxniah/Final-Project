@@ -232,17 +232,23 @@ export const getRecommendations = async ({
   latitude,
   longitude,
 }) => {
-  const res = await api.get("/recommendations", {
-    params: {
-      mood,
-      weather,
-      time_of_day: timeOfDay,
-      lat: latitude,
-      lon: longitude,
-    },
-  });
-
-  return res.data;
+  try {
+    const userId = await getUserId();
+    const res = await api.get("/recommendations", {
+      params: {
+        mood,
+        weather,
+        time_of_day: timeOfDay,
+        lat: latitude,
+        lon: longitude,
+        user_id: userId,
+      },
+    });
+    return res.data;
+  } catch (err) {
+    console.log("Recommendation API error:", err.response?.data || err.message);
+    return [];
+  }
 };
 
 /* -------------------- GET USER ACTIVITY STATE -------------------- */

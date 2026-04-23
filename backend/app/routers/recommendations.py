@@ -83,6 +83,7 @@ def recommendations(
     time_of_day: str | None = Query(None, description="morning | afternoon | evening | night"),
     lat: float = Query(...),
     lon: float = Query(...),
+    user_id: str | None = Query(None),
     db: Session = Depends(get_db)
 ):
     try:
@@ -93,9 +94,11 @@ def recommendations(
         # simulate user behaviour
         recent_ids = set()
         try:
-            user_id = ""
-            engine = UserPreferenceEngine(db, user_id)
-            user_prefs = engine.get_user_prefs().get("categories", {})
+            if user_id:
+                engine = UserPreferenceEngine(db, user_id)
+                user_prefs = engine.get_user_prefs().get("categories", {})
+            else:
+                user_prefs = {}
         except Exception:
             user_prefs = {}
 
@@ -126,7 +129,7 @@ def recommendations(
                 preference_boost(categories, user_prefs)
             )
 
-            if score < 0.2:
+            if score < 0.1:
                 continue
 
             results.append({
@@ -205,7 +208,7 @@ def recommendations(
                 preference_boost(categories, user_prefs)
             )
 
-            if score < 0.2:
+            if score < 0.1:
                 continue
 
             activity.score = score
