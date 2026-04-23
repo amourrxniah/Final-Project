@@ -116,7 +116,7 @@ def get_my_activities(
             # user state
             "is_favourite": is_favourite,
             "is_liked": is_liked,
-            "not_for_me": is_disliked,
+            "is_disliked": is_disliked,
             "is_done": is_done,
             "completed_at": done_map[a.id].timestamp if is_done else None,
 

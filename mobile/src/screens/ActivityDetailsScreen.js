@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-
 import {
   addFavourite,
   removeFavourite,

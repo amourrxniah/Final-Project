@@ -17,6 +17,9 @@ def get_places(lat, lon, limit=30):
     all_places = []
     seen_ids = set()
 
+    if not lat or not lon:
+        return []
+
     per_group_limit = max(1, limit // len(CATEGORY_GROUPS))
 
     for group in CATEGORY_GROUPS:
@@ -59,11 +62,16 @@ def get_places(lat, lon, limit=30):
 
                 seen_ids.add(pid)
 
-                categories = props.get("categories", []) or []
+                categories = props.get("categories", [])
+                title = (
+                    props.get("name")
+                    or props.get("street")
+                    or (categories[0].split(".")[-1].title () if categories else "Nearby Place")
+                )
 
                 all_places.append({
                     "place_id": pid,
-                    "title": props.get("name", "Unknown"),
+                    "title": title,
                     "subtitle": props.get("formatted", ""),
                     "categories": categories,
                     "category_names": categories,

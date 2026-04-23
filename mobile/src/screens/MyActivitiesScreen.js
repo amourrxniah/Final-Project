@@ -7,7 +7,7 @@ import {
   TextInput,
   ActivityIndicator,
   Animated,
-  Image,
+  FlatList,
 } from "react-native";
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -16,11 +16,30 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import { useFocusEffect } from "@react-navigation/native";
 import { getUserActivities, searchActivities } from "../components/api";
+import * as Location from "expo-location";
+
+/* ------------------- DISTANCE ------------------- */
+const getDistanceKm = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+
+  const R = 6371;
+  const dlat = ((lat2 - lat1) * Math.PI) / 180;
+  const dlon = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dlat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dlon / 2) ** 2;
+
+  return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+};
 
 /* ------------------- FUZZY SEARCH ------------------- */
-const fuzzysearch = (a, b) => {
-  const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
+const fuzzysearch = (a = "", b = "") => {
+  if (!a || !b) return 999;
 
+  const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
   for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
 
   for (let i = 1; i <= b.length; i++) {
@@ -38,32 +57,70 @@ const fuzzysearch = (a, b) => {
   return matrix[b.length][a.length];
 };
 
+/* ------------------- ICON ------------------- */
+const getActivityIcon = (item) => {
+  const cats = item.category_names || [];
+
+  const map = {
+    "catering.restaurant": "silverware-variant",
+    "catering.cafe": "coffee",
+    "entertainment.cinema": "movie-open",
+    "entertainment.museum": "bank",
+    "leisure.park": "tree",
+    "sport.fitness": "dumbbell",
+  };
+
+  for (let c of cats) {
+    if (map[c]) return map[c];
+  }
+
+  if (item.category && map[item.category]) return map[item.category];
+
+  if (item.is_done) return "check-circle";
+  if (item.is_favourite) return "heart-outline";
+  if (item.rating) return "star-outline";
+  // if (item.is_liked) return "thumb-up-outline";
+  // if (item.is_disliked) return "thumb-down-outline";
+
+  return "compass-outline"; // clean default
+};
+
 export default function MyActivitiesScreen({ navigation }) {
   const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [userLocation, setUserLocation] = useState(null);
+
+  const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [trending, setTrending] = useState([]);
+  const [activeTab, setActiveTab] = useState("Total");
+
   const [stats, setStats] = useState({
     favourites: 0,
-    liked: 0,
-    disliked: 0,
+    rated: 0,
     done: 0,
     total: 0,
   });
 
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [trending, setTrending] = useState([]);
-
-  const [activeTab, setActiveTab] = useState("Total");
-
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const bookmarkPulse = useRef(new Animated.Value(1)).current;
 
   const TABS = ["Total", "Favourites", "Ratings", "History"];
 
-  const displayActivities = filteredActivities || [];
+  /* ------------------- GET LOCATION ------------------- */
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
 
+      const loc = await Location.getCurrentPositionAsync({});
+      setUserLocation(loc.coords);
+    })();
+  }, []);
+
+  /* ------------------- FETCH ------------------- */
   useFocusEffect(
     React.useCallback(() => {
       fetchData();
@@ -82,26 +139,15 @@ export default function MyActivitiesScreen({ navigation }) {
         friction: 6,
         useNativeDriver: true,
       }),
-
-      Animated.spring(bookmarkPulse, {
-        toValue: 1.3,
-        friction: 3,
-        useNativeDriver: true,
-      }),
-      Animated.spring(bookmarkPulse, {
-        toValue: 1,
-        friction: 3,
-        useNativeDriver: true,
-      }),
     ]).start();
   }, []);
 
   const fetchData = async () => {
     try {
-      setActivities([]);
+      setLoading(true);
 
       const data = await getUserActivities();
-      const list = data || [];
+      const list = Array.isArray(data) ? data : [];
 
       setActivities(list);
       updateStats(list);
@@ -119,14 +165,36 @@ export default function MyActivitiesScreen({ navigation }) {
     }
   };
 
+  /* ------------------- STATS ------------------- */
   const updateStats = (list) => {
     setStats({
-      favourites: list.filter((a) => a?.is_favourite).length,
-      liked: list.filter((a) => a?.is_liked).length,
-      disliked: list.filter((a) => a?.not_for_me).length,
-      done: list.filter((a) => a?.is_done).length,
       total: list.length,
+      favourites: list.filter((a) => a?.is_favourite).length,
+      rated: list.filter(
+        (a) =>
+          a?.is_liked ||
+          a?.is_disliked ||
+          (a?.rating !== null && a?.rating !== undefined),
+      ).length,
+      done: list.filter((a) => a?.is_done).length,
     });
+  };
+
+  const renderStars = (rating = 0) => {
+    const stars = [];
+    const rounded = Math.round(rating);
+
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <MaterialCommunityIcons
+          key={i}
+          name={i <= rounded ? "star" : "star-outline"}
+          size={14}
+          color="#ffb703"
+        />,
+      );
+    }
+    return <View style={{ flexDirection: "row" }}>{stars}</View>;
   };
 
   /* ------------------- RANK ------------------- */
@@ -134,7 +202,7 @@ export default function MyActivitiesScreen({ navigation }) {
     (a.is_done ? 3 : 0) +
     (a.is_favourite ? 2 : 0) +
     (a.is_liked ? 1 : 0) -
-    (a.not_for_me ? 1 : 0) +
+    (a.is_disliked ? 1 : 0) +
     (a.rating || 0);
 
   const getRank = (item) => {
@@ -142,50 +210,52 @@ export default function MyActivitiesScreen({ navigation }) {
     return sorted.findIndex((a) => a.id === item.id) + 1;
   };
 
-  /* ------------------- ICON ------------------- */
-  const getActivityIcon = (item) => {
-    if (item.category === "food") return "silverware-fork-knife";
-    if (item.category === "exercise") return "dumbbell";
-    if (item.category === "outdoor") return "tree-outline";
-    if (item.category === "social") return "account-group-outline";
-
-    if (item.is_done) return "check-circle-outline";
-    if (item.is_favourite) return "heart-outline";
-    if (item.rating) return "star-outline";
-    if (item.is_liked) return "thumb-up-outline";
-    if (item.not_for_me) return "thumb-down-outline";
-    return "compass-outline"; // clean default
-  };
-
   /* ------------------- SEARCH ------------------- */
   useEffect(() => {
-    if (!search.trim()) {
-      setSuggestions([]);
-      return;
-    }
+    const runSearch = async () => {
+      if (!search.trim()) {
+        setSuggestions([]);
+        return;
+      }
+      const results = await searchActivities(search);
+      setSuggestions(results || []);
 
-    const lower = search.toLowerCase();
+      try {
+        // try api search first
+        const apiResults = await searchActivities(search);
 
-    const ranked = activities
-      .map((a) => {
-        const title = a.title.toLowerCase();
+        if (apiResults?.length > 0) {
+          setSuggestions(apiResults);
+          return;
+        }
 
-        let score = 0;
-        if (title.startsWith(lower)) score += 5;
-        if (title.includes(lower)) score += 3;
+        // fallback fuzzy
+        const lower = search.toLowerCase();
+        const ranked = activities
+          .map((a) => {
+            const title = a.title.toLowerCase();
+            let score = 0;
 
-        // fuzzy match
-        const distance = fuzzysearch(lower, title);
-        if (distance <= 2) score += 4;
+            if (title.startsWith(lower)) score += 5;
+            if (title.includes(lower)) score += 3;
 
-        return { ...a, score };
-      })
-      .filter((a) => a.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 9); // limit suggestions
+            const distance = fuzzysearch(lower, title);
+            if (distance <= 2) score += 4;
 
-    setSuggestions(ranked);
-  }, [search, activities]);
+            return { ...a, score };
+          })
+          .filter((a) => a.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 8); // limit suggestions
+
+        setSuggestions(ranked);
+      } catch (err) {
+        console.log("Search error", err.message);
+      }
+    };
+
+    runSearch();
+  }, [search]);
 
   /* ------------------- LIVE UPDATE HANDLER ------------------- */
   const updateActivityLocal = (updated) => {
@@ -199,39 +269,28 @@ export default function MyActivitiesScreen({ navigation }) {
   };
 
   /* ------------------- FILTER ------------------- */
-  const filteredActivities = useMemo(() => {
-    if (!Array.isArray(activities)) return [];
-
+  const displayActivities = useMemo(() => {
     let list = [...activities];
 
     // tab filter
-    switch (activeTab) {
-      case "Favourites":
-        list = list.filter((a) => a?.is_favourite);
-        break;
+    if (activeTab === "Favourites") list = list.filter((a) => a.is_favourite);
 
-      case "Ratings":
-        list = list.filter(
-          (a) => a?.is_liked || a?.not_for_me || typeof a?.rating === "number",
-        );
-        break;
+    if (activeTab === "Ratings")
+      list = list.filter((a) => a.rating || a.is_liked || a.is_disliked);
 
-      case "History":
-        list = list.filter((a) => a?.is_done);
-        break;
-
-      case "Total":
-      default:
-        break;
-    }
+    if (activeTab === "History") list = list.filter((a) => a.is_done);
 
     // apply search on top
     if (search.trim()) {
-      const lower = search.toLowerCase();
-      list = list.filter((a) => a?.title?.toLowerCase().includes(lower));
+      const s = search.toLowerCase();
+      list = list.filter((a) => a.title.toLowerCase().includes(s));
     }
 
-    return list;
+    // sorting
+    return list.sort((a, b) => {
+      //newest interaction top
+      return new Date(b.completed_at || 0) - new Date(a.completed_at || 0);
+    });
   }, [activities, activeTab, search]);
 
   /* ------------------- CLICK HANDLER ------------------- */
@@ -317,6 +376,24 @@ export default function MyActivitiesScreen({ navigation }) {
               onChangeText={setSearch}
             />
           </View>
+          {/* SEARCH SUGGESTIONS*/}
+          {suggestions.length > 0 && (
+            <View style={styles.suggestionsBox}>
+              {suggestions.map((item, index) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.suggestionItem}
+                  onPress={() => handleSelect(item)}
+                >
+                  <Text style={styles.suggestionText}>{item.title}</Text>
+
+                  {index !== suggestions.length - 1 && (
+                    <View style={styles.suggestionDivider} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {trending.length > 0 && (
             <>
@@ -350,22 +427,15 @@ export default function MyActivitiesScreen({ navigation }) {
             </>
           )}
 
-          {/* SEARCH SUGGESTIONS*/}
-          {suggestions.length > 0 && (
-            <View style={styles.suggestionsBox}>
-              {suggestions.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  onPress={() => handleSelect(item)}
-                >
-                  <Text style={styles.suggestionText}>{item.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
           {/* STATS */}
           <View style={styles.statsGrid}>
+            <StatCard
+              label="Total"
+              value={stats.total}
+              icon="chart-bar"
+              iconGradient={["#5e60ce", "#64dfdf"]}
+            />
+
             <StatCard
               label="Favourites"
               value={stats.favourites}
@@ -375,27 +445,16 @@ export default function MyActivitiesScreen({ navigation }) {
 
             <StatCard
               label="Ratings"
-              value={
-                stats.liked +
-                stats.disliked +
-                (activities || []).filter((a) => a.rating != null).length
-              }
-              icon="thumb-up-outline"
+              value={stats.rated}
+              icon="star-outline"
               iconGradient={["#ffb703", "#ffd166"]}
             />
 
             <StatCard
               label="History"
               value={stats.done}
-              icon="check-circle-outline"
+              icon="history"
               iconGradient={["#38b000", "#70e000"]}
-            />
-
-            <StatCard
-              label="Total"
-              value={stats.total}
-              icon="chart-bar"
-              iconGradient={["#5e60ce", "#64dfdf"]}
             />
           </View>
 
@@ -486,44 +545,47 @@ export default function MyActivitiesScreen({ navigation }) {
 
                     {/* RIGHT SUMMARY */}
                     <View style={styles.summaryRow}>
-                      {/* RATING BUBBLE */}
-                      {typeof item.rating === "number" && (
-                        <View style={styles.rating}>
-                          <MaterialCommunityIcons
-                            name="star"
-                            size={14}
-                            color="#fff"
-                          />
-                          <Text style={styles.ratingText}>
-                            ★ {item.rating}/5
-                          </Text>
-                        </View>
-                      )}
-
-                      {/* LIKE / DISLIKE */}
-                      {item.is_liked && (
+                      {activeTab === "Favourites" ? (
                         <MaterialCommunityIcons
-                          name="thumb-up"
-                          size={16}
-                          color="#34c759"
+                          name="heart"
+                          size={14}
+                          color="#fff"
                         />
-                      )}
+                      ) : (
+                        <>
+                          {/* RATING BUBBLE */}
+                          {typeof item.rating === "number" &&
+                            activeTab !== "Favourites" && (
+                              <View style={styles.ratingPill}>
+                                {renderStars(item.rating)}
+                              </View>
+                            )}
 
-                      {item.not_for_me && (
-                        <MaterialCommunityIcons
-                          name="thumb-down"
-                          size={16}
-                          color="#ff3b30"
-                        />
-                      )}
+                          {/* LIKE / DISLIKE */}
+                          {item.is_liked && (
+                            <MaterialCommunityIcons
+                              name="heart-circle"
+                              size={18}
+                              color="#ff4fa3"
+                            />
+                          )}
 
-                      {/* COMPLETED DATE */}
-                      {item.is_done && item.completed_at && (
-                        <MaterialCommunityIcons
-                          name="clock-outline"
-                          size={16}
-                          color="#666"
-                        />
+                          {item.is_disliked && (
+                            <MaterialCommunityIcons
+                              name="close-circle"
+                              size={18}
+                              color="#a0a0a0"
+                            />
+                          )}
+                          {/* COMPLETED DATE */}
+                          {item.is_done && item.completed_at && (
+                            <MaterialCommunityIcons
+                              name="check-circle"
+                              size={18}
+                              color="#6b5cff"
+                            />
+                          )}
+                        </>
                       )}
                     </View>
                   </View>
@@ -540,12 +602,6 @@ export default function MyActivitiesScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.content}>{renderContent()}</View>
       <AIAssistant />
-
-      {/* <BottomNav 
-        navigation={navigation} 
-        active="favourites"
-        bookmarkPulse={bookmarkPulse}
-         /> */}
     </View>
   );
 }
@@ -919,10 +975,10 @@ const styles = StyleSheet.create({
   ratingPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ff9f0a",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
+    backgroundColor: "#fff7e6",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
 
   ratingText: {
@@ -931,5 +987,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 3,
     marginBottom: 10,
+  },
+
+  suggestionItem: {
+    paddingVertical: 10,
+  },
+
+  suggestionDivider: {
+    height: 1,
+    backgroundColor: "#eee",
   },
 });
