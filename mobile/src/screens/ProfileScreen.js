@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 14,
-    gap: 8
+    gap: 8,
   },
 
   activityRow: {
