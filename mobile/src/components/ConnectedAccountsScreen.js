@@ -4,13 +4,64 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Switch,
+  Alert
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { BlurView } from "expo-blur";
+import { useState } from "react";
 
 export default function ConnectedAccountsScreen({ navigation }) {
+  const [accounts, setAccounts] = useState({
+    google: true,
+    apple: false,
+    email: true
+  });
+
+  const toggle = async (key) => {
+    const current = accounts[key];
+
+    //confirm toggle off
+    if (current) {
+      Alert.alert(
+        "Disconnect Account",
+        `Are you sure you want to disconnext your ${key} account?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Disconnect",
+            style: "destructive",
+            onPress: async () => {
+              const updated = { ...acounts, [key]: false };
+              setAccounts(updated);
+
+              await AsyncStorage.setItem(
+                "connected_accounts",
+                JSON.stringify(updated)
+              );
+            },
+          },
+        ],
+      );
+    } else {
+      // turning on
+      const updated = { ...acounts, [key]: true };
+      setAccounts(updated);       
+
+      await AsyncStorage.setItem(
+        "connected_accounts",
+        JSON.stringify(updated)
+      );
+    }
+    setAccounts((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   return (
     <View style={styles.container}>
       {/* BACK */}
@@ -41,16 +92,36 @@ export default function ConnectedAccountsScreen({ navigation }) {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <BlurView intensity={60} tint="light" style={styles.card}>
-          <AccountRow icon="google" text="Google" connected color="#db4437" />
-          <AccountRow icon="apple" text="Apple" color="#000" />
-          <AccountRow icon="email" text="Email" connected color="#3a86ff" />
+          <AccountRow 
+            icon="google" 
+            text="Google"
+            color="#db4437" 
+            active={accounts.google} 
+            onToggle={() => toggle("google")}
+          />
+
+          <AccountRow 
+            icon="apple" 
+            text="Apple"
+            color="#000"
+            active={accounts.apple} 
+            onToggle={() => toggle("apple")}
+          />
+
+          <AccountRow 
+            icon="email" 
+            text="Email"
+            color="#3a86ff"
+            active={accounts.email} 
+            onToggle={() => toggle("email")}
+          />
         </BlurView>
       </ScrollView>
     </View>
   );
 }
 
-const AccountRow = ({ icon, text, connected, color }) => (
+const AccountRow = ({ icon, text, color, active, onToggle }) => (
   <View style={styles.row}>
     <View style={[styles.iconWrap, { backgroundColor: color + "20"}]}>
         <MaterialCommunityIcons name={icon} size={24} color={color} />
@@ -58,16 +129,11 @@ const AccountRow = ({ icon, text, connected, color }) => (
     
     <Text style={styles.text}>{text}</Text>
 
-    <TouchableOpacity 
-        style={[
-            styles.btn,
-            { backgroundColor: connected ? "#06d6a0" : "#9b5de5"},
-        ]}
-    >
-      <Text style={styles.btnText}>
-        {connected ? "Connected" : "Connect"}
-      </Text>
-    </TouchableOpacity>
+    <Switch 
+      value={active}
+      onValueChange={onToggle}
+      trackColor={{ false: "#ccc", true: "#06d6a0" }}
+    />
   </View>
 );
 

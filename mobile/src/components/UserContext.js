@@ -49,12 +49,19 @@ export const UserProvider = ({ children }) => {
 
     let url = user.profile_image;
 
+    if (url.includes("localhost")) {
+      url = url.replace(
+        "localhost:8000",
+        "https://final-project-8-q2v4.onrender.com",
+      );
+    }
+
     if (!url.startsWith("http")) {
       url = `${BACKEND_URL}${url}`;
     }
 
     // cache
-    return `${url}?t=${Date.now()}`;
+    return url;
   };
 
   return (

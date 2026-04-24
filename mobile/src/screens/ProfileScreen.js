@@ -102,7 +102,7 @@ export default function ProfileScreen({ navigation }) {
         getCurrentUser(),
         getMoodStats(),
         getAchievements(),
-        getUserActivities()
+        getUserActivities(),
       ]);
 
       updateUser(userData || {});
@@ -328,8 +328,10 @@ export default function ProfileScreen({ navigation }) {
                     source={{ uri: imageUri }}
                     style={styles.avatar}
                     resizeMode="cover"
-                    onError={(e) => console.log("IMAGE ERROR:", e.nativeEvent)}
-                    onLoad={(e) => console.log("IMAGE LOADED:", imageUri)}
+                    onError={(e) => {
+                      console.log("IMAGE ERROR:", e.nativeEvent);
+                      updateUser({ profile_image: null });
+                    }}
                   />
                 ) : (
                   <View style={styles.avatarFallback}>
@@ -382,7 +384,7 @@ export default function ProfileScreen({ navigation }) {
                   color="#3a86ff"
                 />
                 <Stat
-                  label="Achievement"
+                  label="Achievements"
                   value={achievementsCount}
                   icon="trophy-outline"
                   color="#06d6a0"
@@ -444,43 +446,49 @@ export default function ProfileScreen({ navigation }) {
               {activities.length === 0 ? (
                 <Text style={styles.emptyText}>No activity yet</Text>
               ) : (
-                activities.slice(0, 5).map((item, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={styles.activityRow}
-                    onPress={() =>
-                      navigation.navigate("ActivityDetails", {
-                        activity: item,
-                      })
-                    }
-                  >
-                    <View style={styles.activityIcon}>
-                      <MaterialCommunityIcons
-                        name="map-marker"
-                        size={20}
-                        color="#fff"
-                      />
-                    </View>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                  contentContainerStyle={{ paddingBottom: 10 }}
+                >
+                  {activities.slice(0, 5).map((item, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={styles.activityRow}
+                      onPress={() =>
+                        navigation.navigate("ActivityDetails", {
+                          activity: item,
+                        })
+                      }
+                    >
+                      <View style={styles.activityIcon}>
+                        <MaterialCommunityIcons
+                          name="map-marker"
+                          size={20}
+                          color="#fff"
+                        />
+                      </View>
 
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.activityTitle}>
-                        {item.title?.trim() || "Activity"}
-                      </Text>
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={styles.activityTitle}>
+                          {item.title?.trim() || "Activity"}
+                        </Text>
 
-                      <Text style={styles.activitySubtitle}>
-                        {shortenLocation(item.subtitle)}
-                      </Text>
-                    </View>
+                        <Text style={styles.activitySubtitle}>
+                          {shortenLocation(item.subtitle)}
+                        </Text>
+                      </View>
 
-                    {item.is_liked && (
-                      <MaterialCommunityIcons
-                        name="heart"
-                        size={18}
-                        color="#ef476f"
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))
+                      {item.is_liked && (
+                        <MaterialCommunityIcons
+                          name="heart"
+                          size={18}
+                          color="#ef476f"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               )}
             </View>
 
