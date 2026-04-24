@@ -47,7 +47,7 @@ export default function HomeScreen({ navigation }) {
     most_common_mood: null,
   });
 
-  const [editModalVisible, setEditModaVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [newName, setNewName] = useState("");
 
   const [trend, setTrend] = useState([]);
@@ -111,7 +111,7 @@ export default function HomeScreen({ navigation }) {
     try {
       await updateUserProfile({ name: newName.trim() });
       setName(newName.trim());
-      setEditModaVisible(false);
+      setEditModalVisible(false);
       Alert.alert("Success", "Name updated successfully!");
     } catch (e) {
       console.log("Update name error", e);
@@ -121,7 +121,7 @@ export default function HomeScreen({ navigation }) {
 
   const openEditModal = () => {
     setNewName(name);
-    setEditModaVisible(true);
+    setEditModalVisible(true);
   };
 
   /* -------------------- LOAD CORE DATA -------------------- */
@@ -200,7 +200,7 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     const interval = setInterval(() => {
       loadTrend(viewMode);
-    }, 30000); //every 5s
+    }, 30000); //every 30s
     return () => clearInterval(interval);
   }, [viewMode]);
 
@@ -451,7 +451,7 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setEditModaVisible(false)}
+                onPress={() => setEditModalVisible(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>

@@ -2,7 +2,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { MoodProvider } from "./src/components/MoodContext";
-
+import { UserProvider } from "./src/components/UserContext";
 import WelcomeScreen from "./src/screens/WelcomeScreen";
 import PrivacyScreen from "./src/screens/PrivacyScreen";
 import AuthChoiceScreen from "./src/screens/AuthChoiceScreen";
@@ -21,50 +21,52 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <MoodProvider>
-      <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={{
-            animation: "slide_from_right",
-            gestureEnabled: true,
-            headerShown: false,
-          }}
-        >
-          {/* auth screens */}
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          <Stack.Screen name="Privacy" component={PrivacyScreen} />
-          <Stack.Screen name="AuthChoice" component={AuthChoiceScreen} />
-          <Stack.Screen name="ManualLogin" component={ManualLoginScreen} />
-          <Stack.Screen
-            name="ForgotPassword"
-            component={ForgotPasswordScreen}
-          />
-          <Stack.Screen name="ManualSignup" component={ManualSignupScreen} />
-
-          {/* main app screens */}
-          <Stack.Screen
-            name="MainTabs"
-            component={MainTabs}
-            options={{ headerShown: false }}
-          />
-
-          {/* other screens */}
-          <Stack.Screen
-            name="DetectedContext"
-            component={DetectedContextScreen}
-          />
-          <Stack.Screen name="Overview" component={OverviewScreen} />
-
-          <Stack.Screen
-            name="ActivityDetails"
-            component={ActivityDetailsScreen}
-            options={{
-              presentation: "modal",
+    <UserProvider>
+      <MoodProvider>
+        <NavigationContainer>
+          <Stack.Navigator
+            screenOptions={{
+              animation: "slide_from_right",
+              gestureEnabled: true,
+              headerShown: false,
             }}
-          />
-          <Stack.Screen name="Accounts" component={ConnectedAccountsScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </MoodProvider>
+          >
+            {/* auth screens */}
+            <Stack.Screen name="Welcome" component={WelcomeScreen} />
+            <Stack.Screen name="Privacy" component={PrivacyScreen} />
+            <Stack.Screen name="AuthChoice" component={AuthChoiceScreen} />
+            <Stack.Screen name="ManualLogin" component={ManualLoginScreen} />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+            />
+            <Stack.Screen name="ManualSignup" component={ManualSignupScreen} />
+
+            {/* main app screens */}
+            <Stack.Screen
+              name="MainTabs"
+              component={MainTabs}
+              options={{ headerShown: false }}
+            />
+
+            {/* other screens */}
+            <Stack.Screen
+              name="DetectedContext"
+              component={DetectedContextScreen}
+            />
+            <Stack.Screen name="Overview" component={OverviewScreen} />
+
+            <Stack.Screen
+              name="ActivityDetails"
+              component={ActivityDetailsScreen}
+              options={{
+                presentation: "modal",
+              }}
+            />
+            <Stack.Screen name="Accounts" component={ConnectedAccountsScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </MoodProvider>
+    </UserProvider>
   );
 }

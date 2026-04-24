@@ -16,14 +16,14 @@ import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState, useRef } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
-
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import ConfettiCannon from "react-native-confetti-cannon";
 import Toast from "react-native-toast-message";
 
 import AIAssistant from "../components/AIAssistant/AIAssistant";
-
+import { useUser } from "../components/UserContext";
 import {
   getCurrentUser,
   getMoodStats,
@@ -45,7 +45,7 @@ const useCountUp = (value) => {
     Animated.timing(animated, {
       toValue: value,
       duration: 800,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
 
     const id = animated.addListener(({ value }) => {
@@ -58,9 +58,19 @@ const useCountUp = (value) => {
   return display;
 };
 
+const shortenLocation = (location) => {
+  if (!location) return "London";
+
+  const parts = location.split(",");
+
+  if (parts.length >= 2) return parts[1].trim();
+
+  return parts[0];
+};
+
 /* -------------------- MAIN -------------------- */
 export default function ProfileScreen({ navigation }) {
-  const [user, setUser] = useState({});
+  const { user, updateUser, getProfileImage, loadUser } = useUser();
   const [stats, setStats] = useState({
     total_syncs: 0,
     current_streak: 0,
@@ -79,6 +89,12 @@ export default function ProfileScreen({ navigation }) {
   const fade = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.95)).current;
 
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUser();
+    }, []),
+  );
+
   /* -------------------- FETCH -------------------- */
   const fetchData = async () => {
     try {
@@ -87,7 +103,7 @@ export default function ProfileScreen({ navigation }) {
       const ach = await getAchievements();
       const acts = await getUserActivities();
 
-      setUser(userData || {});
+      updateUser(userData || {});
       setName(userData?.name || "");
 
       setStats({
@@ -99,8 +115,9 @@ export default function ProfileScreen({ navigation }) {
 
       // detect new achievements
       if (prevAchievements.length) {
-        ach.forEach((a, i) => {
-          if (a.completed && !prevAchievements[i]?.completed) {
+        ach.forEach((a) => {
+          const prev = prevAchievements.find((p) => p.title === a.title);
+          if (a.completed && !prev?.completed) {
             triggerAchievement(a.title);
           }
         });
@@ -161,12 +178,12 @@ export default function ProfileScreen({ navigation }) {
       try {
         const path = await uploadProfileImg({ uri });
 
-        const fullUrl = `${BACKEND_URL}${path}`;
+        // force refresh user from backend
+        await loadUser();
 
-        setUser((prev) => ({
-          ...prev,
+        updateUser({
           profile_image: path,
-        }));
+        });
 
         Toast.show({
           type: "success",
@@ -178,12 +195,31 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  /* -------------------- MOOD SUMMARY -------------------- */
+  const getMoodSummary = () => {
+    if (!activities.length) return "Start exploring to build your mood profile";
+
+    const liked = activities.filter((a) => a.is_liked);
+
+    const outdoor = liked.filter(
+      (a) =>
+        a.category?.toLowerCase().includes("park") ||
+        a.category?.toLowerCase().includes("outdoor"),
+    ).length;
+
+    const indoor = liked.length - outdoor;
+
+    const preference = outdoor > indoor ? "outdoor" : "indoor";
+
+    return `You tend to enjoy ${preference} experience and engage most when exploring new places.`;
+  };
+
   /* -------------------- SAVE NAME -------------------- */
   const saveName = async () => {
     try {
       await updateUserProfile({ name });
 
-      setUser((prev) => ({ ...prev, name }));
+      updateUser({ name });
       setEditModal(false);
 
       Toast.show({
@@ -203,9 +239,7 @@ export default function ProfileScreen({ navigation }) {
   );
   const recommendationsCount = useCountUp(activities.length);
 
-  const imageUri = user.profile_image
-    ? `${BACKEND_URL}${user.profile_image}`
-    : null;
+  const imageUri = getProfileImage();
 
   /* -------------------- MENU ACTIONS -------------------- */
   const handleMenu = (type) => {
@@ -320,20 +354,13 @@ export default function ProfileScreen({ navigation }) {
               </View>
 
               {/* NAME */}
-              {editModal ? (
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  style={styles.nameInput}
-                />
-              ) : (
-                <TouchableOpacity onPress={() => setEditModal(true)}>
-                  <Text style={styles.name}>
-                    {user?.name || "User"}{" "}
-                    <MaterialCommunityIcons name="pencil" size={14} />
-                  </Text>
-                </TouchableOpacity>
-              )}
+
+              <TouchableOpacity onPress={() => setEditModal(true)}>
+                <Text style={styles.name}>
+                  {user?.name || "User"}{" "}
+                  <MaterialCommunityIcons name="pencil" size={14} />
+                </Text>
+              </TouchableOpacity>
 
               <Text style={styles.email}>{user?.email}</Text>
               <Text style={styles.member}>Member since January 2026</Text>
@@ -368,6 +395,12 @@ export default function ProfileScreen({ navigation }) {
             </BlurView>
           </Animated.View>
 
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Your Mood Style</Text>
+
+            <Text style={styles.summaryText}>{getMoodSummary()}</Text>
+          </View>
+
           {/* ACHIEVEMENTS */}
           <View style={styles.section}>
             <View
@@ -396,6 +429,52 @@ export default function ProfileScreen({ navigation }) {
               keyExtractor={(_, i) => i.toString()}
               renderItem={({ item }) => <AchievementBadge item={item} />}
             />
+
+            {/* RECENT ACTIVITY */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons
+                  name="history"
+                  size={20}
+                  color="#3a86ff"
+                />
+                <Text style={styles.sectionTitle}>Recent Activity</Text>
+              </View>
+
+              {activities.length === 0 ? (
+                <Text style={styles.emptyText}>No activity yet</Text>
+              ) : (
+                activities.slice(0, 5).map((item, i) => (
+                  <View key={i} style={styles.activityRow}>
+                    <View style={styles.activityIcon}>
+                      <MaterialCommunityIcons
+                        name="map-marker"
+                        size={20}
+                        color="#fff"
+                      />
+                    </View>
+
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={styles.activityTitle}>
+                        {item.name?.trim() || "Activity"}
+                      </Text>
+
+                      <Text style={styles.activitySubtitle}>
+                        {shortenLocation(item.location)}
+                      </Text>
+                    </View>
+
+                    {item.is_liked && (
+                      <MaterialCommunityIcons
+                        name="heart"
+                        size={18}
+                        color="#ef476f"
+                      />
+                    )}
+                  </View>
+                ))
+              )}
+            </View>
 
             {/* MENU */}
             <View style={styles.menu}>
@@ -544,6 +623,12 @@ const AchievementBadge = ({ item }) => {
 
       {item.completed && (
         <MaterialCommunityIcons name="check-circle" size={30} color="#06d6a0" />
+      )}
+
+      {!item.completed && (
+        <View style={styles.lockedBar}>
+          <Text style={styles.lockedText}>Locked</Text>
+        </View>
       )}
     </Animated.View>
   );
@@ -713,15 +798,51 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  activityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 10,
+    elevation: 2,
+  },
+
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#3a86ff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  activityTitle: {
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  activitySubtitle: {
+    fontSize: 12,
+    color: "#777",
+  },
+
   achievementCard: {
     flexDirection: "row",
-    padding: 18,
+    padding: 20,
     backgroundColor: "#fff",
-    borderRadius: 20,
-    marginRight: 12,
+    borderRadius: 24,
+    marginRight: 14,
     alignItems: "center",
-    width: 300,
-    elevation: 3,
+    width: 320,
+    minHeight: 100,
+    elevation: 5,
   },
 
   iconCircle: {
@@ -730,7 +851,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 14,
   },
 
   achievementTitle: {
@@ -742,6 +863,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#777",
     marginTop: 2,
+  },
+
+  lockedBar: {
+    marginTop: 6,
+    backgroundColor: "#eee",
+    borderRadius: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignSelf: "flex-start",
+  },
+
+  lockedText: {
+    fontSize: 11,
+    color: "#999",
+  },
+
+  emptyText: {
+    color: "#999",
+    marginTop: 10,
+  },
+
+  summaryCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 18,
+    marginTop: 15,
+    elevation: 3,
+  },
+
+  summaryTitle: {
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  summaryText: {
+    color: "#555",
+    lineHeight: 18,
   },
 
   menu: {

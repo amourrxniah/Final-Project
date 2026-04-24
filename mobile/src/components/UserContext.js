@@ -1,0 +1,72 @@
+import React, { createContext, useContext, useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getCurrentUser, BACKEND_URL } from "./api";
+
+const UserContext = createContext();
+
+export const useUser = () => useContext(UserContext);
+
+export const UserProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  /* -------------------- LOAD USER -------------------- */
+  const loadUser = async () => {
+    try {
+      const cached = await AsyncStorage.getItem("user");
+
+      if (cached) {
+        setUser(JSON.parse(cached));
+      }
+
+      // always refreshf rom backend
+      const fresh = await getCurrentUser();
+      setUser(fresh);
+
+      await AsyncStorage.setItem("user", JSON.stringify(fresh));
+    } catch (e) {
+      console.group("User load error:", e);
+    } finally {
+      setLoadingUser(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  /* -------------------- UPDATE USER -------------------- */
+  const updateUser = async (updates) => {
+    const updated = { ...user, ...updates };
+
+    setUser(updated);
+    await AsyncStorage.setItem("user", JSON.stringify(updated));
+  };
+
+  /* -------------------- PROFILE IMAGE -------------------- */
+  const getProfileImage = () => {
+    if (!user?.profile_image) return null;
+
+    const url = user.profile_image.startsWith("http")
+      ? user.profile_image
+      : `${BACKEND_URL}${user.profile_image}`;
+
+    // cache
+    return `${url}?t=${Date.now()}`;
+  };
+
+  return (
+    <UserContext.Provider
+      value={{
+        user,
+        setUser,
+        updateUser,
+        loadUser,
+        getProfileImage,
+        loadingUser,
+      }}
+    >
+      {children}
+    </UserContext.Provider>
+  );
+};

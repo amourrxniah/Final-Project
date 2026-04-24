@@ -45,7 +45,7 @@ def get_achievements(
             # explorer
                 "title": "Activity Explorer",
                 "desc": "Tried 15 activities",
-                "completed": False # connect later to activity count,
+                "completed": user.activities_count >= 15
         
         },
         {
