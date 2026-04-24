@@ -410,16 +410,14 @@ export default function ProfileScreen({ navigation }) {
                 marginBottom: 10,
               }}
             >
-              <MaterialCommunityIcons
-                name="trophy-outline"
-                size={20}
-                color="#f4c430"
-              />
-              <Text
-                style={[styles.sectionTitle, { marginLeft: 6, marginTop: 8 }]}
-              >
-                Achievements
-              </Text>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons
+                  name="trophy-outline"
+                  size={26}
+                  color="#f4c430"
+                />
+                <Text style={styles.sectionTitle}>Achievements</Text>
+              </View>
             </View>
 
             <FlatList
@@ -435,7 +433,7 @@ export default function ProfileScreen({ navigation }) {
               <View style={styles.sectionHeader}>
                 <MaterialCommunityIcons
                   name="history"
-                  size={20}
+                  size={26}
                   color="#3a86ff"
                 />
                 <Text style={styles.sectionTitle}>Recent Activity</Text>
@@ -795,13 +793,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 10,
   },
 
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 14,
+    gap: 8
   },
 
   activityRow: {

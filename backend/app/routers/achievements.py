@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.security import get_current_user
-
+from app.models.activity import Activity
 router = APIRouter(prefix="/achievements", tags=["achievements"])
 
 @router.get("")
@@ -10,6 +10,9 @@ def get_achievements(
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
+    # count activities from DB
+    activities_count = db.query(Activity).filter(Activity.user_id == user.id).count()
+    
     achievements = [
         {
             # first sync
@@ -33,19 +36,19 @@ def get_achievements(
             # streak
                 "title": "Consistency King",
                 "desc": "Maintained a 30-day streak",
-                "completed": user.total_syncs >= 30,
+                "completed": user.current_streak >= 30,
         },
         {
             # streak
                 "title": "Weekly Warrior",
                 "desc": "7 day streak",
-                "completed": user.total_syncs >= 7,
+                "completed": user.current_streak >= 7,
         },
         {
             # explorer
                 "title": "Activity Explorer",
                 "desc": "Tried 15 activities",
-                "completed": user.activities_count >= 15
+                "completed": activities_count >= 15
         
         },
         {
@@ -55,7 +58,5 @@ def get_achievements(
                 "completed": user.total_syncs >= 100,
         },
     ]
-
-   
 
     return achievements
