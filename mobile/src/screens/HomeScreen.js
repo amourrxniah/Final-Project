@@ -83,7 +83,10 @@ export default function HomeScreen({ navigation }) {
 
       try {
         const uploadedUrl = await uploadProfileImg(img);
-        const fullUrl = `${BACKEND_URL}${uploadedUrl}`;
+
+        const fullUrl = uploadedUrl.startsWith("http")
+          ? uploadedUrl
+          : `${BACKEND_URL}/${uploadedUrl}`;
 
         //update ui
         setProfileImage(fullUrl);
@@ -143,7 +146,7 @@ export default function HomeScreen({ navigation }) {
       if (user.profile_image) {
         const imageUrl = user.profile_image.startsWith("http")
           ? user.profile_image
-          : `${BACKEND_URL}${user.profile_image}`;
+          : `${BACKEND_URL}/${user.profile_image}`;
 
         setProfileImage(imageUrl);
 

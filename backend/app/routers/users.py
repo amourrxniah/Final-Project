@@ -62,12 +62,12 @@ async def  upload_profile_img(
         with open(file_location, "wb") as f:
             f.write(contents)
 
-        user.profile_image = file_location
-        db.commit()
-
         BASE_URL = "https://final-project-8-q2v4.onrender.com"
 
-        return {"image_uri": f"{BASE_URL}/{file_location}"}
+        user.profile_image = f"{BASE_URL}/{file_location}"
+        db.commit()
+
+        return {"profile_image": user.profile_image}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

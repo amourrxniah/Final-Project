@@ -33,6 +33,7 @@ import {
   updateUserProfile,
   BACKEND_URL,
 } from "../components/api";
+import { isAxiosError } from "axios";
 
 /* -------------------- COUNT UP HOOK -------------------- */
 const useCountUp = (value) => {
@@ -60,12 +61,66 @@ const useCountUp = (value) => {
 
 const shortenLocation = (location) => {
   if (!location) return "London";
-
   const parts = location.split(",");
-
-  if (parts.length >= 2) return parts[1].trim();
-
+  // try borough / area instead of full address
+  if (parts.length >= 3) return parts[1].trim();
+  if (parts.length >= 2) return parts[0].trim();
   return parts[0];
+};
+
+/* ------------------- ICON ------------------- */
+const getActivityStyle = (item) => {
+  const raw = item.category_names?.[0] || item.category || "";
+
+  const cat = raw.toLowerCase();
+
+  if (cat.includes("restaurant"))
+    return {
+      icon: "silverware-variant",
+      color: "#ff7a18",
+      bg: "#fff3e8",
+    };
+
+  if (cat.includes("cafe") || cat.includes("coffee"))
+    return {
+      icon: "coffee",
+      color: "#6f4e37",
+      bg: "#f5ebe0",
+    };
+
+  if (cat.includes("cinema") || cat.includes("movie"))
+    return {
+      icon: "movie-open",
+      color: "#6366f1",
+      bg: "#eef2ff",
+    };
+
+  if (cat.includes("muserum"))
+    return {
+      icon: "bank",
+      color: "#0ea5e9",
+      bg: "#e0f2fe",
+    };
+
+  if (cat.includes("park") || cat.includes("outdoor"))
+    return {
+      icon: "tree",
+      color: "#22c55e",
+      bg: "#ecfdf5",
+    };
+
+  if (cat.includes("gym") || cat.includes("fitness"))
+    return {
+      icon: "dumbbell",
+      color: "#ef4444",
+      bg: "#fee2e2",
+    };
+
+  return {
+    icon: "compass-outline",
+    color: "#7c3aed",
+    bg: "#f3e8ff",
+  };
 };
 
 /* -------------------- MAIN -------------------- */
@@ -149,7 +204,7 @@ export default function ProfileScreen({ navigation }) {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [achievements]);
 
   /* -------------------- CONFETTI -------------------- */
   const triggerAchievement = (title) => {
@@ -241,7 +296,9 @@ export default function ProfileScreen({ navigation }) {
   );
   const recommendationsCount = useCountUp(activities.length);
 
-  const imageUri = getProfileImage();
+  const imageUri = user?.profile_image?.startsWith("http")
+    ? user.profile_image
+    : `${BACKEND_URL}/${user?.profile_image}`;
 
   /* -------------------- MENU ACTIONS -------------------- */
   const handleMenu = (type) => {
@@ -329,7 +386,7 @@ export default function ProfileScreen({ navigation }) {
                     style={styles.avatar}
                     resizeMode="cover"
                     onError={(e) => {
-                      console.log("IMAGE ERROR:", e.nativeEvent);
+                      console.log("IMAGE ERROR, fallback used:", e.nativeEvent);
                       updateUser({ profile_image: null });
                     }}
                   />
@@ -443,52 +500,63 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.sectionTitle}>Recent Activity</Text>
               </View>
 
-              {activities.length === 0 ? (
+              {!activities.length ? (
                 <Text style={styles.emptyText}>No activity yet</Text>
               ) : (
-                <ScrollView
+                <FlatList
+                  data={activities}
+                  keyExtractor={(item, index) =>
+                    item.id?.toString() || index.toString()
+                  }
                   showsVerticalScrollIndicator={false}
-                  nestedScrollEnabled
+                  style={{ maxHeight: 260 }}
                   contentContainerStyle={{ paddingBottom: 10 }}
-                >
-                  {activities.slice(0, 5).map((item, i) => (
-                    <TouchableOpacity
-                      key={i}
-                      style={styles.activityRow}
-                      onPress={() =>
-                        navigation.navigate("ActivityDetails", {
-                          activity: item,
-                        })
-                      }
-                    >
-                      <View style={styles.activityIcon}>
-                        <MaterialCommunityIcons
-                          name="map-marker"
-                          size={20}
-                          color="#fff"
-                        />
-                      </View>
+                  renderItem={({ item }) => {
+                    const style = getActivityStyle(item);
 
-                      <View style={{ flex: 1, marginLeft: 10 }}>
-                        <Text style={styles.activityTitle}>
-                          {item.title?.trim() || "Activity"}
-                        </Text>
+                    return (
+                      <TouchableOpacity
+                        style={styles.activityRow}
+                        onPress={() =>
+                          navigation.navigate("ActivityDetails", {
+                            activity: item,
+                          })
+                        }
+                      >
+                        <View
+                          style={[
+                            styles.activityIcon,
+                            { backgroundColor: style.bg },
+                          ]}
+                        >
+                          <MaterialCommunityIcons
+                            name={style.icon}
+                            size={20}
+                            color={style.color}
+                          />
+                        </View>
 
-                        <Text style={styles.activitySubtitle}>
-                          {shortenLocation(item.subtitle)}
-                        </Text>
-                      </View>
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text style={styles.activityTitle}>
+                            {item.title?.trim() || "Activity"}
+                          </Text>
 
-                      {item.is_liked && (
-                        <MaterialCommunityIcons
-                          name="heart"
-                          size={18}
-                          color="#ef476f"
-                        />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                          <Text style={styles.activitySubtitle}>
+                            {shortenLocation(item.subtitle)}
+                          </Text>
+                        </View>
+
+                        {item.is_liked && (
+                          <MaterialCommunityIcons
+                            name="heart"
+                            size={18}
+                            color="#ef476f"
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
               )}
             </View>
 
@@ -834,7 +902,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#3a86ff",
     justifyContent: "center",
     alignItems: "center",
   },
