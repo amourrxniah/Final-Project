@@ -98,10 +98,12 @@ export default function ProfileScreen({ navigation }) {
   /* -------------------- FETCH -------------------- */
   const fetchData = async () => {
     try {
-      const userData = await getCurrentUser();
-      const moodStats = await getMoodStats();
-      const ach = await getAchievements();
-      const acts = await getUserActivities();
+      const [userData, moodStats, ach, acts] = await Promise.all([
+        getCurrentUser(),
+        getMoodStats(),
+        getAchievements(),
+        getUserActivities()
+      ]);
 
       updateUser(userData || {});
       setName(userData?.name || "");
@@ -443,7 +445,15 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.emptyText}>No activity yet</Text>
               ) : (
                 activities.slice(0, 5).map((item, i) => (
-                  <View key={i} style={styles.activityRow}>
+                  <TouchableOpacity
+                    key={i}
+                    style={styles.activityRow}
+                    onPress={() =>
+                      navigation.navigate("ActivityDetails", {
+                        activity: item,
+                      })
+                    }
+                  >
                     <View style={styles.activityIcon}>
                       <MaterialCommunityIcons
                         name="map-marker"
@@ -454,11 +464,11 @@ export default function ProfileScreen({ navigation }) {
 
                     <View style={{ flex: 1, marginLeft: 10 }}>
                       <Text style={styles.activityTitle}>
-                        {item.name?.trim() || "Activity"}
+                        {item.title?.trim() || "Activity"}
                       </Text>
 
                       <Text style={styles.activitySubtitle}>
-                        {shortenLocation(item.location)}
+                        {shortenLocation(item.subtitle)}
                       </Text>
                     </View>
 
@@ -469,7 +479,7 @@ export default function ProfileScreen({ navigation }) {
                         color="#ef476f"
                       />
                     )}
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>

@@ -26,9 +26,14 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def get_current_user(current_user: User = Depends(get_user)):
     
     return {
+        "id": current_user.id,
         "name": current_user.name,
         "username": current_user.username,
         "email": current_user.email,
+        "profile_image": current_user.profile_image,
+        "total_syncs": current_user.total_syncs,
+        "current_streak": current_user.current_streak,
+        "created_at": current_user.created_at,
     }
 
 def calculate_age(dob: date):
@@ -46,7 +51,7 @@ def check_username(username: str, db: Session = Depends(get_db)):
 async def manual_signup(data: SignupRequest, db: Session = Depends(get_db)):
     required = ["name", "username", "email", "password", "date_of_birth"]
     
-    if not all(k in data for k in required):
+    if not all(getattr(data, k) for k in required):
         raise HTTPException(status_code=400, detail="Missing fields")
     
     #email exists

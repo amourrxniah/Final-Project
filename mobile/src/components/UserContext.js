@@ -25,7 +25,7 @@ export const UserProvider = ({ children }) => {
 
       await AsyncStorage.setItem("user", JSON.stringify(fresh));
     } catch (e) {
-      console.group("User load error:", e);
+      console.log("User load error:", e?.response.data || e.message);
     } finally {
       setLoadingUser(false);
     }
@@ -47,9 +47,11 @@ export const UserProvider = ({ children }) => {
   const getProfileImage = () => {
     if (!user?.profile_image) return null;
 
-    const url = user.profile_image.startsWith("http")
-      ? user.profile_image
-      : `${BACKEND_URL}${user.profile_image}`;
+    let url = user.profile_image;
+
+    if (!url.startsWith("http")) {
+      url = `${BACKEND_URL}${url}`;
+    }
 
     // cache
     return `${url}?t=${Date.now()}`;

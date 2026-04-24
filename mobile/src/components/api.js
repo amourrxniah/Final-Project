@@ -7,7 +7,7 @@ export const BACKEND_URL = "https://final-project-8-q2v4.onrender.com";
 /* -------------------- AXIOS -------------------- */
 const api = axios.create({
   baseURL: BACKEND_URL,
-  timeout: 30000,
+  timeout: 10000,
 });
 
 /* attach token automatically */
