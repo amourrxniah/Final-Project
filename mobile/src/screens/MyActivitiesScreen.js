@@ -78,12 +78,36 @@ const getActivityIcon = (item) => {
   const cats = item.category_names || [];
 
   const map = {
-    "catering.restaurant": "silverware-variant",
-    "catering.cafe": "coffee",
-    "entertainment.cinema": "movie-open",
-    "entertainment.museum": "bank",
-    "leisure.park": "tree",
-    "sport.fitness": "dumbbell",
+    "catering.restaurant": {
+      icon: "silverware-variant",
+      color: "#ff7a18",
+      bg: "#fff3e8",
+    },
+    "catering.cafe": {
+      icon: "coffee",
+      color: "#6f4e37",
+      bg: "#f5ebe0",
+    },
+    "entertainment.cinema": {
+      icon: "movie-open",
+      color: "#6366f1",
+      bg: "#eef2ff",
+    },
+    "entertainment.museum": {
+      icon: "bank",
+      color: "#0ea5e9",
+      bg: "#e0f2fe",
+    },
+    "leisure.park": {
+      icon: "tree",
+      color: "#22c55e",
+      bg: "#ecfdf5",
+    },
+    "sport.fitness": {
+      icon: "dumbbell",
+      color: "#ef4444",
+      bg: "#fee2e2",
+    },
   };
 
   for (let c of cats) {
@@ -92,11 +116,30 @@ const getActivityIcon = (item) => {
 
   if (item.category && map[item.category]) return map[item.category];
 
-  if (item.is_done) return "check-circle";
-  if (item.is_favourite) return "heart-outline";
-  if (item.rating) return "star-outline";
+  if (item.is_done)
+    return {
+      icon: "check-circle",
+      color: "#22c55e",
+      bg: "#ecfdf5",
+    };
+  if (item.is_favourite)
+    return {
+      icon: "heart-outline",
+      color: "#ec4899",
+      bg: "#fce7f3",
+    };
+  if (item.rating)
+    return {
+      icon: "star-outline",
+      color: "#f59e0b",
+      bg: "#fef3c7",
+    };
 
-  return "compass-outline"; // clean default
+  return {
+    icon: "compass-outline",
+    color: "#7c3aed",
+    bg: "#f3e8ff",
+  }; // clean default
 };
 
 const getMetaColor = (type) => {
@@ -105,31 +148,11 @@ const getMetaColor = (type) => {
       return "#3b82f6"; // blue
     case "location":
       return "#10b981"; // green
-    case "location":
+    case "category":
       return "#f59e0b"; // amber
     default:
       return "#9ca3af";
   }
-};
-
-/* ------------------- ADDRESS SHORTENER ------------------- */
-const shortenAddress = (text = "") => {
-  if (!text) return "No location";
-
-  // try postcode first (UK)
-  const postcodeMatch = text.match(/[A-Z]{1,2}\d{1,2}\s?\d[A-Z]{2}/i);
-  if (postcodeMatch) return postcodeMatch[0].toUpperCase();
-
-  // fallback - last meaningful part
-  const parts = text
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  if (parts.length >= 3) return parts[parts.length - 3].trim(); // Lewisham
-  if (parts.length >= 2) return parts[parts.length - 2].trim();
-
-  return text.slice(0, 25);
 };
 
 export default function MyActivitiesScreen({ navigation }) {
@@ -424,79 +447,96 @@ export default function MyActivitiesScreen({ navigation }) {
   };
 
   /* ------------------- TRENDING CARD ------------------- */
-  const renderTrendingCard = (item) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.trendingCard}
-      onPress={() => handleSelect(item)}
-      activeOpacity={0.9}
-    >
-      <LinearGradient
-        colors={["#7c3aed", "#667eea"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.trendingGradient}
+  const renderTrendingCard = (item) => {
+    const iconData = getActivityIcon(item);
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.trendingCard}
+        onPress={() => handleSelect(item)}
+        activeOpacity={0.9}
       >
-        <View style={styles.trendingIconContainer}>
-          <MaterialCommunityIcons
-            name={getActivityIcon(item)}
-            size={28}
-            color="#fff"
-          />
-        </View>
-
-        <Text numberOfLines={2} style={styles.trendingTitle}>
-          {item.title}
-        </Text>
-        <View style={styles.trendingMetaContainer}>
-          <Text style={styles.trendingMeta}>{getTrendingLabel(item)}</Text>
-          <View style={styles.trendingScoreBadge}>
-            <MaterialCommunityIcons name="fire" size={12} color="#fff" />
-            <Text style={styles.trendingScoreText}>
-              {item.trending_score || 0}
-            </Text>
+        <LinearGradient
+          colors={["#7c3aed", "#667eea"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.trendingGradient}
+        >
+          <View
+            style={[
+              styles.trendingIconContainer,
+              { backgroundColor: iconData.bg },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={iconData.icon}
+              size={24}
+              color={iconData.color}
+            />
           </View>
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
 
-  /* ------------------- RECENTLY ADDED CARD ------------------- */
-  const renderRecentlyAddedCard = (item) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.recentCard}
-      onPress={() => handleSelect(item)}
-      activeOpacity={0.8}
-    >
-      <LinearGradient
-        colors={["#fff", "#faf5ff"]}
-        style={styles.recentGradient}
-      >
-        <View style={styles.recentIconContainer}>
-          <MaterialCommunityIcons
-            name={getActivityIcon(item)}
-            size={28}
-            color="#7c3aed"
-          />
-        </View>
-
-        <View style={styles.recentContent}>
-          <Text numberOfLines={2} style={styles.recentTitle}>
+          <Text numberOfLines={2} style={styles.trendingTitle}>
             {item.title}
           </Text>
-          <Text style={styles.recentDate}>
-            {new Date(item.created_at || Date.now()).toLocaleDateString()}
-          </Text>
-        </View>
-        <MaterialCommunityIcons
-          name="chevron-right"
-          size={18}
-          color="#c4b5fd"
-        />
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+          <View style={styles.trendingMetaContainer}>
+            <Text style={styles.trendingMeta}>{getTrendingLabel(item)}</Text>
+            <View style={styles.trendingScoreBadge}>
+              <MaterialCommunityIcons name="fire" size={12} color="#fff" />
+              <Text style={styles.trendingScoreText}>
+                {item.trending_score || 0}
+              </Text>
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  };
+
+  /* ------------------- RECENTLY ADDED CARD ------------------- */
+  const renderRecentlyAddedCard = (item) => {
+    const iconData = getActivityIcon(item);
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.recentCard}
+        onPress={() => handleSelect(item)}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={["#fff", "#faf5ff"]}
+          style={styles.recentGradient}
+        >
+          <View
+            style={[
+              styles.recentIconContainer,
+              { backgroundColor: iconData.bg },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={iconData.icon}
+              size={28}
+              color={iconData.color}
+            />
+          </View>
+
+          <View style={styles.recentContent}>
+            <Text numberOfLines={2} style={styles.recentTitle}>
+              {item.title}
+            </Text>
+            <Text style={styles.recentDate}>
+              {new Date(item.created_at || Date.now()).toLocaleDateString()}
+            </Text>
+          </View>
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={18}
+            color="#c4b5fd"
+          />
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  };
 
   /* ------------------- ACTIVITY CARD ------------------- */
   const renderActivityCard = (item) => {
@@ -514,11 +554,10 @@ export default function MyActivitiesScreen({ navigation }) {
         : null;
 
     // use formatted address shortener
-    const addressLabel = item.address
-      ? shortenAddress(item.address)
-      : item.city || item.suburb || null;
+    const addressLabel = item.city || item.suburb || item.formatted || null;
 
     const showHeart = activeTab !== "Ratings";
+    const iconData = getActivityIcon(item);
 
     return (
       <Animated.View
@@ -541,16 +580,13 @@ export default function MyActivitiesScreen({ navigation }) {
 
           <View style={styles.cardRow}>
             {/* LEFT ICON */}
-            <LinearGradient
-              colors={["#f3e8ff", "#fff"]}
-              style={styles.iconWrap}
-            >
+            <View style={[styles.iconWrap, { backgroundColor: iconData.bg }]}>
               <MaterialCommunityIcons
-                name={getActivityIcon(item)}
-                size={26}
-                color="#7c3aed"
+                name={iconData.icon}
+                size={24}
+                color={iconData.color}
               />
-            </LinearGradient>
+            </View>
 
             {/* MAIN CONTENT */}
             <View style={styles.cardContent}>
@@ -883,48 +919,55 @@ export default function MyActivitiesScreen({ navigation }) {
           {displayActivities.length === 0 ? (
             <EmptyState />
           ) : (
-            <ScrollView
-              style={{ maxHeight: 420 }}
-              showsVerticalScrollIndicator={false}
-            >
-              {displayActivities.slice(0, 20).map(renderActivityCard)}
-            </ScrollView>
+            <View style={styles.activitiesContainer}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+                contentContainerStyle={{ paddingBottom: 10 }}
+              >
+                {displayActivities.slice(0, 40).map(renderActivityCard)}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* MAP BELOW LIST */}
+          {displayActivities.length > 0 && userLocation && (
+            <View style={styles.MapContainer}>
+              <MapView
+                style={styles.bottomMap}
+                initialRegion={{
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude,
+                  latitudeDelta: 0.08,
+                  longitudeDelta: 0.08,
+                }}
+                showsUserLocation
+                scrollEnabled={false} // disable 1 finger nav
+                pitchEnabled={false}
+                rotateEnabled={false}
+                zoomEnabled={true} // 2 finger nav
+              >
+                {displayActivities.map((item) => {
+                  const lat = item?.lat ?? item?.latitude;
+                  const lon = item?.lon ?? item?.longitude;
+
+                  if (lat == null || lon == null) return null;
+
+                  return (
+                    <Marker
+                      key={item.id}
+                      coordinate={{
+                        latitude: Number(lat),
+                        longitude: Number(lon),
+                      }}
+                      title={item.title}
+                    />
+                  );
+                })}
+              </MapView>
+            </View>
           )}
         </ScrollView>
-
-        {/* MAP BELOW LIST */}
-        <View style={styles.MapContainer}>
-          {displayActivities.length > 0 && userLocation && (
-            <MapView
-              style={styles.bottomMap}
-              initialRegion={{
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-                latitudeDelta: 0.08,
-                longitudeDelta: 0.08,
-              }}
-              showsUserLocation
-            >
-              {displayActivities.slice(0, 30).map((item) => {
-                const lat = item?.lat ?? item?.latitude;
-                const lon = item?.lon ?? item?.longitude;
-
-                if (!lat || !lon) return null;
-
-                return (
-                  <Marker
-                    key={item.id}
-                    coordinate={{
-                      latitude: Number(lat),
-                      longitude: Number(lon),
-                    }}
-                    title={item.title}
-                  />
-                );
-              })}
-            </MapView>
-          )}
-        </View>
       </>
     );
   };
@@ -1030,7 +1073,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: 260,
+    paddingBottom: 40,
   },
 
   searchBox: {
@@ -1218,7 +1261,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBlockColor: "#f1f5f9",
+    borderBottomColor: "#f1f5f9",
   },
 
   suggestionText: {
@@ -1337,9 +1380,11 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#fff",
-    borderRadius: 22,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#eef1f5",
     elevation: 4,
     shadowColor: "#000",
     shadowOpacity: 0.05,
@@ -1355,9 +1400,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 25,
-    backgroundColor: "#f3f0ff",
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  activitiesContainer: {
+    maxHeight: 420,
+    marginBottom: 12,
   },
 
   cardContent: {
@@ -1366,13 +1415,15 @@ const styles = StyleSheet.create({
   },
 
   cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1e293b",
   },
 
   cardDesc: {
-    color: "#666",
-    marginTop: 6,
+    color: "#94a3b8",
+    marginTop: 4,
+    fontSize: 13,
   },
 
   distanceContainer: {
@@ -1396,8 +1447,9 @@ const styles = StyleSheet.create({
 
   metaRow: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 8,
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
   },
 
   metaText: {
@@ -1409,6 +1461,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    maxWidth: "48%",
   },
 
   summaryRow: {
@@ -1431,13 +1484,10 @@ const styles = StyleSheet.create({
   },
 
   MapContainer: {
-    position: "absolute",
-    bottom: 0,
-    let: 0,
-    right: 0,
-    height: 220,
-    borderTopLeftRadius: 20,
-    borderTopLeftRadius: 20,
+    height: 240,
+    marginTop: 10,
+    marginBottom: 40,
+    borderRadius: 20,
     overflow: "hidden",
     elevation: 10,
   },
