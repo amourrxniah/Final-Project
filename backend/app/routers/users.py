@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models.user import User
 from app.services.security import get_current_user
 import os
+import time
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -56,7 +57,7 @@ async def  upload_profile_img(
     user = Depends(get_current_user)
 ):
     try:
-        file_location = f"{UPLOAD_DIR}/{user.id}.jpg"
+        file_location = f"{UPLOAD_DIR}/{user.id}_{int(time.time())}.jpg"
         contents = await file.read()
 
         with open(file_location, "wb") as f:

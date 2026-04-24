@@ -33,6 +33,7 @@ import {
   updateUserProfile,
   BACKEND_URL,
 } from "../components/api";
+import { useUser } from "../components/UserContext";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -59,6 +60,7 @@ export default function HomeScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
 
   const [viewMode, setViewMode] = useState("live");
+  const { updateUser } = useUser();
 
   /* -------------------- PICK IMAGE-------------------- */
   const pickImage = async () => {
@@ -66,7 +68,7 @@ export default function HomeScreen({ navigation }) {
     if (status !== "granted") {
       Alert.alert(
         "Permission needed",
-        "Please grant permission to access your photos",
+        "Please allow access to your photos to upload a profile picture.",
       );
       return;
     }
@@ -78,25 +80,30 @@ export default function HomeScreen({ navigation }) {
       aspect: [1, 1],
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets?.length > 0) {
       const img = result.assets[0];
 
       try {
         const uploadedUrl = await uploadProfileImg(img);
+        const cacheUrl = `${fullUrl}?t=${Date.now()}`;
 
-        const fullUrl = uploadedUrl.startsWith("http")
-          ? uploadedUrl
-          : `${BACKEND_URL}/${uploadedUrl}`;
+        if (!uploadedUrl) {
+          throw new Error("Upload returned no URL");
+        }
+
+        const fullUrl =
+          typeof uploadedUrl === "string" && uploadedUrl.startsWith("http")
+            ? uploadedUrl
+            : `${BACKEND_URL}/${uploadedUrl}`;
 
         //update ui
-        setProfileImage(fullUrl);
-
-        await updateUserProfile({ profile_image: uploadedUrl });
+        setProfileImage(cacheUrl);
 
         //save locally
-        await AsyncStorage.setItem("profile_image", fullUrl);
+        await AsyncStorage.setItem("profile_image", cacheUrl);
 
         Alert.alert("Success", "Profile picture updated!");
+        updateUser({ profile_image: fullUrl });
       } catch (e) {
         console.log("Upload error", e);
         Alert.alert("Error", "Failed to update profile picture");
@@ -148,9 +155,10 @@ export default function HomeScreen({ navigation }) {
           ? user.profile_image
           : `${BACKEND_URL}/${user.profile_image}`;
 
-        setProfileImage(imageUrl);
+        const cachehUrl = `${imageUrl}?t=${Date.now()}`;
+        setProfileImage(cachehUrl);
 
-        await AsyncStorage.setItem("profile_image", imageUrl);
+        await AsyncStorage.setItem("profile_image", cachehUrl);
       }
 
       setStats(statsData);
@@ -276,6 +284,7 @@ export default function HomeScreen({ navigation }) {
             {profileImage ? (
               <Image
                 source={{ uri: profileImage }}
+                key={profileImage}
                 style={styles.profileImage}
               />
             ) : (

@@ -95,7 +95,7 @@ const getActivityStyle = (item) => {
       bg: "#eef2ff",
     };
 
-  if (cat.includes("muserum"))
+  if (cat.includes("museum"))
     return {
       icon: "bank",
       color: "#0ea5e9",
@@ -225,20 +225,23 @@ export default function ProfileScreen({ navigation }) {
     if (!perm.granted) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaType.Images,
       quality: 0.7,
       allowsEditing: true,
     });
 
     if (!result.canceled) {
-      const uri = result.assets[0].uri;
+      const asset = result.assets[0];
 
       try {
-        const path = await uploadProfileImg({ uri });
+        const path = await uploadProfileImg(asset);
 
-        // force refresh user from backend
-        await loadUser();
+        const fullUrl = path.startsWith("http")
+          ? path
+          : `${BACKEND_URL}${path.startsWith("/") ? "" : "/"}${path}`;
 
         updateUser({
+          ...user,
           profile_image: path,
         });
 
@@ -247,7 +250,7 @@ export default function ProfileScreen({ navigation }) {
           text1: "Profile picture updated",
         });
       } catch (e) {
-        console.log(e);
+        console.log("Upload error:", e);
       }
     }
   };
@@ -296,9 +299,11 @@ export default function ProfileScreen({ navigation }) {
   );
   const recommendationsCount = useCountUp(activities.length);
 
-  const imageUri = user?.profile_image?.startsWith("http")
-    ? user.profile_image
-    : `${BACKEND_URL}/${user?.profile_image}`;
+  const imageUri = user?.profile_image
+    ? user?.profile_image?.startsWith("http")
+      ? user.profile_image
+      : `${BACKEND_URL}/${user?.profile_image.startsWith("/") ? "" : "/"}${user.profile_image}`
+    : null;
 
   /* -------------------- MENU ACTIONS -------------------- */
   const handleMenu = (type) => {
@@ -386,8 +391,7 @@ export default function ProfileScreen({ navigation }) {
                     style={styles.avatar}
                     resizeMode="cover"
                     onError={(e) => {
-                      console.log("IMAGE ERROR, fallback used:", e.nativeEvent);
-                      updateUser({ profile_image: null });
+                      console.log("IMAGE LOAD FAILED:", imageUri);
                     }}
                   />
                 ) : (

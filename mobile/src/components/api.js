@@ -342,15 +342,19 @@ export const uploadProfileImg = async (image) => {
 
   formData.append("file", {
     uri: image.uri,
-    name: "profile.jpg",
+    name: `profile_${Date.now()}.jpg`,
     type: "image/jpeg",
   });
 
   const res = await api.post("/users/upload-profile-img", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
   });
 
-  return res.data.image_uri;
+  console.log("UPLOAD RESPONSE:", res.data);
+
+  return res.data.profile_image;
 };
 
 /* -------------------- PROFILE -------------------- */
