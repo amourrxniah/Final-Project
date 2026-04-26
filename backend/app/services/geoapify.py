@@ -1,5 +1,6 @@
 import requests
 import time
+import random
 from app.config import GEOAPIFY_API_KEY
 
 BASE_URL = "https://api.geoapify.com/v2/places"
@@ -69,6 +70,11 @@ def get_places(lat, lon, limit=30):
                     or (categories[0].split(".")[-1].title () if categories else "Nearby Place")
                 )
 
+                # randomise
+                rating = round(random.uniform(3.8, 4.8), 1)
+                price = random.choice([1, 2, 2, 3])
+                popularity = round(random.uniform(0.4,1.0), 2)
+
                 all_places.append({
                     "place_id": pid,
                     "title": title,
@@ -80,9 +86,9 @@ def get_places(lat, lon, limit=30):
                     "distance": (props.get("distance", 0) or 0) / 1000,
 
                     # fallback scoring
-                    "rating": 4.2,
-                    "price": 2,
-                    "popularity": 0.7,
+                    "rating": rating,
+                    "price": price,
+                    "popularity": popularity,
                 })
         except requests.exceptions.Timeout:
             print("GEOAPIFY TIMEOUT")
@@ -91,5 +97,7 @@ def get_places(lat, lon, limit=30):
         except Exception as e:
             print("Parsing error:", e)
             continue
+
+    random.shuffle(all_places)
         
     return all_places

@@ -119,7 +119,8 @@ def recommendations(
             recs = db.query(RecommendationHistory).filter(
                 RecommendationHistory.user_id == user_id,
                 RecommendationHistory.timestamp >= now - timedelta(hours=24)
-            )
+            ).all()
+
             recent_recs = {r.activity_id for r in recs}
 
         # preferences
@@ -154,7 +155,7 @@ def recommendations(
             )
 
             # exploration
-            score *= random.uniform(0.9, 1.1)
+            score *= random.uniform(0.95, 1.05)
 
             return score
 
@@ -273,7 +274,7 @@ def recommendations(
                     activity_id=item["id"]
                 ))
             db.commit()
-            
+
         return final
         
 

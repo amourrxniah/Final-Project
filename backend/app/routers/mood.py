@@ -83,15 +83,15 @@ def get_trend(
     # --- DEFAULT RANGES ---
     if mode == "live":
         start = now - timedelta(hours=24)
-        bucket_minutes = 60
+        bucket_minutes = 30 # more regular
     
     elif mode == "yesterday":
         start = now - timedelta(days=1)
-        bucket_minutes = 120
+        bucket_minutes = 60
 
     elif mode == "week":
         start = now - timedelta(days=7)
-        bucket_minutes = 720
+        bucket_minutes = 360
     
     elif mode == "month":
         start = now - timedelta(days=30)
@@ -99,15 +99,12 @@ def get_trend(
     
     else:
         start = now - timedelta(days=7)
-        bucket_minutes = 720
+        bucket_minutes = 360
 
-    logs = (
-        db.query(MoodLog)
-        .filter(MoodLog.user_id == user.id)
-        .filter(MoodLog.timestamp >= start)
-        .order_by(MoodLog.timestamp)
-        .all()
-    )
+    logs = db.query(MoodLog).filter(
+            MoodLog.user_id == user.id,
+            MoodLog.timestamp >= start
+        ).order_by(MoodLog.timestamp).all()
 
     mood_map = {
         "low": 0,
@@ -126,31 +123,40 @@ def get_trend(
         if bucket not in buckets:
             buckets[bucket] = []
 
-        buckets[bucket].append(value)
+        buckets[bucket].append({
+            "value": value,
+            "timestamp": log.timestamp,
+        })
     
     max_bucket = int((now - start).total_seconds() / (bucket_minutes * 60))
 
     result = []
+    last_value = 1 # neutral fallback
 
     for i in range(max_bucket + 1):
+        time_point = start + timedelta(minutes=1 * bucket_minutes)
 
         if i in buckets:
-            avg = round(sum(buckets[i]) / len(buckets[i]))
+            values = [v["value"] for v in buckets[i]]
+            avg = round(sum(values) / len(values))
+            timestamp = max(v["timestamp"] for v in buckets[i])
             has_data = True
+            last_value = avg
         else:
-            avg = 1
+            avg = last_value
+            timestamp = time_point
             has_data = False
 
-        time_point = start + timedelta(minutes=i * bucket_minutes)
-
-        if mode in ["live", "yesterday"]:
-            label = time_point.strftime("%H:%M")
-        else:
-            label = time_point.strftime("%d %b")
-            
+        label = (
+            time_point.strftime("%H:%M")
+            if mode in ["live", "yesterday"]
+            else time_point.strftime("%d %b")
+        )
+        
         result.append({
             "value": avg,
             "time": label,
+            "timestamp": timestamp.isoformat(),
             "has_data": has_data 
         })
 
