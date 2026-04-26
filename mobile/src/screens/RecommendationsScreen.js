@@ -179,8 +179,8 @@ export default function RecommendationsScreen({ navigation }) {
     // run tracking in background
     requestAnimationFrame(async () => {
       try {
-        logActivityOpen(activity.id);
-        trackInteraction({
+        await logActivityOpen(activity.id);
+        await trackInteraction({
           type: "click",
           activityId: activity.id,
           categories: activity.category_names || [],
@@ -190,7 +190,7 @@ export default function RecommendationsScreen({ navigation }) {
           timestamp: new Date().toISOString(),
         });
       } catch (err) {
-        console.log("Log error", err);
+        console.log("Tracking error", err);
       }
     });
   };

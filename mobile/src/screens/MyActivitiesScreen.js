@@ -16,7 +16,7 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import MapView, { Marker } from "react-native-maps";
-
+import { connectSocket, getSocket } from "../components/realtime";
 import AIAssistant from "../components/AIAssistant/AIAssistant";
 import { useFocusEffect } from "@react-navigation/native";
 import { getUserActivities, searchActivities } from "../components/api";
@@ -171,6 +171,10 @@ export default function MyActivitiesScreen({ navigation }) {
   const [history, setHistory] = useState([]);
   const [recentlyAdded, setRecentlyAdded] = useState([]);
 
+  const [onlineUsers, setOnlineUsers] = useState({});
+  const [typingUsers, setTypingUsers] = useState({});
+  const typingTimeout = useRef(null);
+
   const [stats, setStats] = useState({
     favourites: 0,
     rated: 0,
@@ -199,7 +203,17 @@ export default function MyActivitiesScreen({ navigation }) {
   /* ------------------- FETCH ------------------- */
   useFocusEffect(
     React.useCallback(() => {
-      fetchData();
+      let isActive = true;
+      const load = async () => {
+        if (!isActive) return;
+        await fetchData();
+      };
+
+      load();
+
+      return () => {
+        isActive = false;
+      };
     }, []),
   );
 
@@ -274,6 +288,17 @@ export default function MyActivitiesScreen({ navigation }) {
     return <View style={{ flexDirection: "row", gap: 2 }}>{stars}</View>;
   };
 
+  /* ------------------- LIVE UPDATE HANDLER ------------------- */
+  const updateActivityLocal = (updated) => {
+    setActivities((prev) => {
+      const updatedList = prev.map((a) =>
+        a.id === updated.id ? { ...a, ...updated } : a,
+      );
+      updateStats(updatedList);
+      return updatedList;
+    });
+  };
+
   /* ------------------- RANK ------------------- */
   const getScore = (a) =>
     (a.is_done ? 3 : 0) +
@@ -342,16 +367,6 @@ export default function MyActivitiesScreen({ navigation }) {
     if (item.trending_score > 15) return "🔥 Very Popular";
     if (item.trending_score > 8) return "🔥 Trending";
     return "✨ Worth trying";
-  };
-  /* ------------------- LIVE UPDATE HANDLER ------------------- */
-  const updateActivityLocal = (updated) => {
-    setActivities((prev) => {
-      const updatedList = prev.map((a) =>
-        a.id === updated.id ? { ...a, ...updated } : a,
-      );
-      updateStats(updatedList);
-      return updatedList;
-    });
   };
 
   /* ------------------- FILTER ------------------- */
@@ -432,13 +447,24 @@ export default function MyActivitiesScreen({ navigation }) {
         20,
       ),
     );
+    // instant update ui
+    setActivities((prev) =>
+      prev.map((a) =>
+        a.id === item.id ? { ...a, last_opened: new Date().toISOString() } : a,
+      ),
+    );
 
     navigation.push("ActivityDetails", {
       activity: {
         ...item,
         category_names: item.category_names || [],
       },
-      onUpdate: updateActivityLocal,
+      onUpdate: (updated) => {
+        updateActivityLocal(updated);
+
+        // force refresh after update
+        fetchData();
+      },
       allActivities: activities,
       mood: null,
       weather: null,
