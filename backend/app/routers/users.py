@@ -57,7 +57,11 @@ async def  upload_profile_img(
     user = Depends(get_current_user)
 ):
     try:
-        file_location = f"{UPLOAD_DIR}/{user.id}_{int(time.time())}.jpg"
+        timestamp = int(time.time())
+
+        filename= f"{user.id}_{timestamp}.jpg"
+        file_location = os.path.join(UPLOAD_DIR, filename)
+
         contents = await file.read()
 
         with open(file_location, "wb") as f:
@@ -65,7 +69,7 @@ async def  upload_profile_img(
 
         BASE_URL = "https://final-project-8-q2v4.onrender.com"
 
-        user.profile_image = f"{BASE_URL}/uploads/{user.id}_{int(time.time())}.jpg"
+        user.profile_image = f"{BASE_URL}/uploads/{filename}"
         db.commit()
 
         return {"profile_image": user.profile_image}
