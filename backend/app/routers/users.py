@@ -65,7 +65,7 @@ async def  upload_profile_img(
 
         BASE_URL = "https://final-project-8-q2v4.onrender.com"
 
-        user.profile_image = f"{BASE_URL}/{file_location}"
+        user.profile_image = f"{BASE_URL}/uploads/{user.id}_{int(time.time())}.jpg"
         db.commit()
 
         return {"profile_image": user.profile_image}

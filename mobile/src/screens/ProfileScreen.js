@@ -33,7 +33,6 @@ import {
   updateUserProfile,
   BACKEND_URL,
 } from "../components/api";
-import { isAxiosError } from "axios";
 
 /* -------------------- COUNT UP HOOK -------------------- */
 const useCountUp = (value) => {
@@ -70,7 +69,7 @@ const shortenLocation = (location) => {
 
 /* ------------------- ICON ------------------- */
 const getActivityStyle = (item) => {
-  const raw = item.category_names?.[0] || item.category || "";
+  const raw = item.category_names?.[0] || item.category || item.title || "";
 
   const cat = raw.toLowerCase();
 
@@ -221,36 +220,52 @@ export default function ProfileScreen({ navigation }) {
 
   /* -------------------- IMAGE PICKER -------------------- */
   const pickImage = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission needed",
+        "Please allow access to your photos to upload a profile picture.",
+      );
+      return;
+    }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
       allowsEditing: true,
+      aspect: [1, 1],
     });
 
-    if (!result.canceled) {
-      const asset = result.assets[0];
+    if (!result.canceled && result.assets?.length > 0) {
+      const img = result.assets[0];
 
       try {
-        const path = await uploadProfileImg(asset);
+        const uploadedUrl = await uploadProfileImg(img);
 
-        const fullUrl = path.startsWith("http")
-          ? path
-          : `${BACKEND_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+        if (!uploadedUrl) {
+          throw new Error("Upload returned no URL");
+        }
 
-        updateUser({
-          ...user,
-          profile_image: path,
-        });
+        const fullUrl =
+          typeof uploadedUrl === "string" && uploadedUrl.startsWith("http")
+            ? uploadedUrl
+            : `${BACKEND_URL}/${uploadedUrl}`;
 
-        Toast.show({
-          type: "success",
-          text1: "Profile picture updated",
-        });
+        // cache buster
+        const cacheUrl = `${fullUrl}?t=${Date.now()}`;
+
+        // update ui
+        setProfileImage(cacheUrl);
+
+        // save locally
+        await AsyncStorage.setItem("profile_image", cacheUrl);
+
+        // update global user
+        updateUser({ profile_image: fullUrl });
+
+        Alert.alert("Success", "Profile picture updated!");
       } catch (e) {
-        console.log("Upload error:", e);
+        console.log("Upload error", e);
       }
     }
   };
@@ -371,255 +386,250 @@ export default function ProfileScreen({ navigation }) {
 
         {confetti && <ConfettiCannon count={80} origin={{ x: 200, y: 0 }} />}
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* PROFILE CARD */}
-          <Animated.View
-            style={{
-              opacity: fade,
-              transform: [{ scale }],
-            }}
-          >
-            <BlurView intensity={60} tint="light" style={styles.profileCard}>
-              {/* AVATAR */}
-              <View style={styles.avatarWrap}>
-                {user.profile_image ? (
-                  <Image
-                    source={{ uri: imageUri }}
-                    style={styles.avatar}
-                    resizeMode="cover"
-                    onError={(e) => {
-                      console.log("IMAGE LOAD FAILED:", imageUri);
+        <FlatList
+          data={[{ key: "content" }]}
+          keyExtractor={(item) => item.key}
+          renderItem={() => (
+            <>
+              {/* PROFILE CARD */}
+              <Animated.View
+                style={{
+                  opacity: fade,
+                  transform: [{ scale }],
+                }}
+              >
+                <BlurView
+                  intensity={60}
+                  tint="light"
+                  style={styles.profileCard}
+                >
+                  {/* AVATAR */}
+                  <TouchableOpacity onPress={pickImage}>
+                    <View style={styles.avatarWrap}>
+                      {user.profile_image ? (
+                        <Image
+                          source={{ uri: imageUri }}
+                          style={styles.avatar}
+                          resizeMode="cover"
+                          onError={(e) => {
+                            console.log("IMAGE LOAD FAILED:", imageUri);
+                          }}
+                        />
+                      ) : (
+                        <View style={styles.avatarFallback}>
+                          <LinearGradient
+                            colors={["#b36bff", "#ff4fa3"]}
+                            style={styles.avatar}
+                          >
+                            <MaterialCommunityIcons
+                              name="account-outline"
+                              size={40}
+                              color="#fff"
+                            />
+                          </LinearGradient>
+                        </View>
+                      )}
+
+                      <TouchableOpacity
+                        onPress={pickImage}
+                        style={styles.camera}
+                      >
+                        <MaterialCommunityIcons
+                          name="camera"
+                          size={16}
+                          color="#000"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* NAME */}
+                  <TouchableOpacity onPress={() => setEditModal(true)}>
+                    <Text style={styles.name}>
+                      {user?.name || "User"}{" "}
+                      <MaterialCommunityIcons name="pencil" size={14} />
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.email}>{user?.email}</Text>
+                  <Text style={styles.member}>Member since January 2026</Text>
+
+                  {/* STATS */}
+                  <View style={styles.statsGrid}>
+                    <Stat
+                      label="Total Syncs"
+                      value={totalSyncs}
+                      icon="pulse"
+                      color="#9b5de5"
+                    />
+                    <Stat
+                      label="Days Active"
+                      value={streak}
+                      icon="calendar"
+                      color="#3a86ff"
+                    />
+                    <Stat
+                      label="Achievements"
+                      value={achievementsCount}
+                      icon="trophy-outline"
+                      color="#06d6a0"
+                    />
+                    <Stat
+                      label="Recommendations"
+                      value={recommendationsCount}
+                      icon="trending-up"
+                      color="#ef476f"
+                    />
+                  </View>
+                </BlurView>
+              </Animated.View>
+
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Your Mood Style</Text>
+
+                <Text style={styles.summaryText}>{getMoodSummary()}</Text>
+              </View>
+
+              {/* ACHIEVEMENTS */}
+              <View style={styles.section}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons
+                      name="trophy-outline"
+                      size={26}
+                      color="#f4c430"
+                    />
+                    <Text style={styles.sectionTitle}>Achievements</Text>
+                  </View>
+                </View>
+              </View>
+
+              <FlatList
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                data={achievements}
+                keyExtractor={(_, i) => i.toString()}
+                renderItem={({ item }) => <AchievementBadge item={item} />}
+              />
+
+              {/* RECENT ACTIVITY */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <MaterialCommunityIcons
+                    name="history"
+                    size={26}
+                    color="#3a86ff"
+                  />
+                  <Text style={styles.sectionTitle}>Recent Activity</Text>
+                </View>
+
+                {!activities.length ? (
+                  <Text style={styles.emptyText}>No activity yet</Text>
+                ) : (
+                  <FlatList
+                    data={activities}
+                    keyExtractor={(item, index) =>
+                      item.id?.toString() || index.toString()
+                    }
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled
+                    scrollEnabled={true}
+                    style={{ height: 210 }}
+                    contentContainerStyle={{ paddingBottom: 10 }}
+                    renderItem={({ item }) => {
+                      const style = getActivityStyle(item);
+
+                      return (
+                        <TouchableOpacity
+                          style={styles.activityRow}
+                          onPress={() =>
+                            navigation.navigate("ActivityDetails", {
+                              activity: item,
+                            })
+                          }
+                        >
+                          <View
+                            style={[
+                              styles.activityIcon,
+                              { backgroundColor: style.bg },
+                            ]}
+                          >
+                            <MaterialCommunityIcons
+                              name={style.icon}
+                              size={20}
+                              color={style.color}
+                            />
+                          </View>
+
+                          <View style={{ flex: 1, marginLeft: 12 }}>
+                            <Text style={styles.activityTitle}>
+                              {item.title?.trim() || "Activity"}
+                            </Text>
+
+                            <Text style={styles.activitySubtitle}>
+                              {shortenLocation(item.subtitle)}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            {item.is_liked && (
+                              <MaterialCommunityIcons
+                                name="heart"
+                                size={18}
+                                color="#ef476f"
+                              />
+                            )}
+
+                            <MaterialCommunityIcons
+                              name="chevron-right"
+                              size={20}
+                              color="#999"
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      );
                     }}
                   />
-                ) : (
-                  <View style={styles.avatarFallback}>
-                    <LinearGradient
-                      colors={["#b36bff", "#ff4fa3"]}
-                      style={styles.avatar}
-                    >
-                      <MaterialCommunityIcons
-                        name="account-outline"
-                        size={40}
-                        color="#fff"
-                      />
-                    </LinearGradient>
-                  </View>
                 )}
-
-                <TouchableOpacity style={styles.camera} onPress={pickImage}>
-                  <MaterialCommunityIcons
-                    name="camera"
-                    size={16}
-                    color="#000"
-                  />
-                </TouchableOpacity>
               </View>
 
-              {/* NAME */}
-
-              <TouchableOpacity onPress={() => setEditModal(true)}>
-                <Text style={styles.name}>
-                  {user?.name || "User"}{" "}
-                  <MaterialCommunityIcons name="pencil" size={14} />
-                </Text>
-              </TouchableOpacity>
-
-              <Text style={styles.email}>{user?.email}</Text>
-              <Text style={styles.member}>Member since January 2026</Text>
-
-              {/* STATS */}
-              <View style={styles.statsGrid}>
-                <Stat
-                  label="Total Syncs"
-                  value={totalSyncs}
-                  icon="pulse"
-                  color="#9b5de5"
+              {/* MENU */}
+              <View style={styles.menu}>
+                <MenuItem
+                  text="Edit Profile Information"
+                  onPress={() => handleMenu("edit")}
                 />
-                <Stat
-                  label="Days Active"
-                  value={streak}
-                  icon="calendar"
-                  color="#3a86ff"
+                <MenuItem
+                  text="Connected Accounts"
+                  onPress={() => handleMenu("accounts")}
                 />
-                <Stat
-                  label="Achievements"
-                  value={achievementsCount}
-                  icon="trophy-outline"
-                  color="#06d6a0"
+                <MenuItem
+                  text="Privacy & Data"
+                  onPress={() => handleMenu("privacy")}
                 />
-                <Stat
-                  label="Recommendations"
-                  value={recommendationsCount}
-                  icon="trending-up"
-                  color="#ef476f"
+                <MenuItem
+                  text="Delete Account"
+                  danger
+                  onPress={() => handleMenu("delete")}
                 />
               </View>
-            </BlurView>
-          </Animated.View>
-
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Your Mood Style</Text>
-
-            <Text style={styles.summaryText}>{getMoodSummary()}</Text>
-          </View>
-
-          {/* ACHIEVEMENTS */}
-          <View style={styles.section}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-            >
-              <View style={styles.sectionHeader}>
-                <MaterialCommunityIcons
-                  name="trophy-outline"
-                  size={26}
-                  color="#f4c430"
-                />
-                <Text style={styles.sectionTitle}>Achievements</Text>
-              </View>
-            </View>
-
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={achievements}
-              keyExtractor={(_, i) => i.toString()}
-              renderItem={({ item }) => <AchievementBadge item={item} />}
-            />
-
-            {/* RECENT ACTIVITY */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <MaterialCommunityIcons
-                  name="history"
-                  size={26}
-                  color="#3a86ff"
-                />
-                <Text style={styles.sectionTitle}>Recent Activity</Text>
-              </View>
-
-              {!activities.length ? (
-                <Text style={styles.emptyText}>No activity yet</Text>
-              ) : (
-                <FlatList
-                  data={activities}
-                  keyExtractor={(item, index) =>
-                    item.id?.toString() || index.toString()
-                  }
-                  showsVerticalScrollIndicator={false}
-                  style={{ maxHeight: 260 }}
-                  contentContainerStyle={{ paddingBottom: 10 }}
-                  renderItem={({ item }) => {
-                    const style = getActivityStyle(item);
-
-                    return (
-                      <TouchableOpacity
-                        style={styles.activityRow}
-                        onPress={() =>
-                          navigation.navigate("ActivityDetails", {
-                            activity: item,
-                          })
-                        }
-                      >
-                        <View
-                          style={[
-                            styles.activityIcon,
-                            { backgroundColor: style.bg },
-                          ]}
-                        >
-                          <MaterialCommunityIcons
-                            name={style.icon}
-                            size={20}
-                            color={style.color}
-                          />
-                        </View>
-
-                        <View style={{ flex: 1, marginLeft: 10 }}>
-                          <Text style={styles.activityTitle}>
-                            {item.title?.trim() || "Activity"}
-                          </Text>
-
-                          <Text style={styles.activitySubtitle}>
-                            {shortenLocation(item.subtitle)}
-                          </Text>
-                        </View>
-
-                        {item.is_liked && (
-                          <MaterialCommunityIcons
-                            name="heart"
-                            size={18}
-                            color="#ef476f"
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-              )}
-            </View>
-
-            {/* MENU */}
-            <View style={styles.menu}>
-              <MenuItem
-                text="Edit Profile Information"
-                onPress={() => handleMenu("edit")}
-              />
-              <MenuItem
-                text="Connected Accounts"
-                onPress={() => handleMenu("accounts")}
-              />
-              <MenuItem
-                text="Privacy & Data"
-                onPress={() => handleMenu("privacy")}
-              />
-              <MenuItem
-                text="Delete Account"
-                danger
-                onPress={() => handleMenu("delete")}
-              />
-            </View>
-
-            {/* <View style={styles.achievementCard}>
-              {achievements.map((a, i) => (
-                <Achievement key={i} {...a} />
-              ))}
-              <Achievement
-                title="First Sync"
-                desc="Completed your first mood sync"
-                icon="target"
-                color="#ff4d6d"
-                completed
-              />
-
-              <Achievement
-                title="Self Aware"
-                desc="Completed 20 mood syncs"
-                icon="brain"
-                color="#9b5de5"
-              />
-
-              <Achievement
-                title="Consistency King"
-                desc="Maintained a 30-day streak"
-                icon="crown"
-                color="#f4c430"
-              />
-
-              <Achievement
-                title="Explorer"
-                desc="Tried 15 activities"
-                icon="star-outline"
-                color="#ff9f1c"
-              />
-            </View> */}
-          </View>
-        </ScrollView>
+            </>
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        />
 
         {/* EDIT MODAL */}
         <Modal visible={editModal} transparent animationType="slide">
@@ -903,9 +913,9 @@ const styles = StyleSheet.create({
   },
 
   activityIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
   },

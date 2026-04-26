@@ -85,25 +85,24 @@ export default function HomeScreen({ navigation }) {
 
       try {
         const uploadedUrl = await uploadProfileImg(img);
-        const cacheUrl = `${fullUrl}?t=${Date.now()}`;
 
         if (!uploadedUrl) {
           throw new Error("Upload returned no URL");
         }
 
-        const fullUrl =
-          typeof uploadedUrl === "string" && uploadedUrl.startsWith("http")
-            ? uploadedUrl
-            : `${BACKEND_URL}/${uploadedUrl}`;
+        // cache buster
+        const cacheUrl = `${uploadedUrl}?t=${Date.now()}`;
 
-        //update ui
+        // update ui
         setProfileImage(cacheUrl);
 
-        //save locally
+        // save locally
         await AsyncStorage.setItem("profile_image", cacheUrl);
 
+        // update global user
+        updateUser({ profile_image: uploadedUrl });
+
         Alert.alert("Success", "Profile picture updated!");
-        updateUser({ profile_image: fullUrl });
       } catch (e) {
         console.log("Upload error", e);
         Alert.alert("Error", "Failed to update profile picture");
@@ -155,10 +154,10 @@ export default function HomeScreen({ navigation }) {
           ? user.profile_image
           : `${BACKEND_URL}/${user.profile_image}`;
 
-        const cachehUrl = `${imageUrl}?t=${Date.now()}`;
-        setProfileImage(cachehUrl);
+        const cacheUrl = `${imageUrl}?t=${Date.now()}`;
+        setProfileImage(cacheUrl);
 
-        await AsyncStorage.setItem("profile_image", cachehUrl);
+        await AsyncStorage.setItem("profile_image", cacheUrl);
       }
 
       setStats(statsData);
