@@ -55,15 +55,15 @@ async def manual_signup(data: SignupRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Missing fields")
     
     #email exists
-    if db.query(User).filter(User.email == data["email"]).first():
+    if db.query(User).filter(User.email == data.email.lower()).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     
     #username exists
-    if db.query(User).filter(User.username == data["username"]).first():
+    if db.query(User).filter(User.username == data.username.lower()).first():
         raise HTTPException(status_code=400, detail="Username already taken")
 
     try:
-        dob = date.fromisoformat(data["date_of_birth"])
+        dob = date.fromisoformat(data.date_of_birth)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format")
 
@@ -71,10 +71,10 @@ async def manual_signup(data: SignupRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Must be 13+")
 
     user = User(
-        name=data["name"],
-        username=data["username"].lower(),
-        email=data["email"].lower(),
-        password_hash=hash_password(data["password"]),
+        name=data.name,
+        username=data.username.lower(),
+        email=data.email.lower(),
+        password_hash=hash_password(data.password),
         date_of_birth=dob,
         provider="manual"
     )
@@ -117,8 +117,8 @@ async def manual_login(data: LoginRequest, db: Session = Depends(get_db)):
     return {"access_token": token}
 
 @router.post("/forgot-password")
-def forgot_password(email:dict, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email["email"]).first()
+def forgot_password(data :dict, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email("email")).first()
 
     if user:
         #generate reset token
