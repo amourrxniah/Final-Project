@@ -90,14 +90,16 @@ export default function HomeScreen({ navigation }) {
           throw new Error("Upload returned no URL");
         }
 
+        const fullUrl = uploadedUrl;
+
         // cache buster
-        const cacheUrl = `${uploadedUrl}?t=${Date.now()}`;
+        const cacheUrl = `${fullUrl}?t=${Date.now()}`;
 
         // update ui
         setProfileImage(cacheUrl);
 
         // save locally
-        await AsyncStorage.setItem("profile_image", cacheUrl);
+        await AsyncStorage.setItem("profile_image", fullUrl);
 
         // update global user
         updateUser({ profile_image: uploadedUrl });
@@ -154,10 +156,13 @@ export default function HomeScreen({ navigation }) {
           ? user.profile_image
           : `${BACKEND_URL}/${user.profile_image}`;
 
-        const cacheUrl = `${imageUrl}?t=${Date.now()}`;
-        setProfileImage(cacheUrl);
+        // only upate if different
+        if (!cachedImage || !cachedImage.includes(imageUrl)) {
+          const cacheUrl = `${imageUrl}?t=${Date.now()}`;
+          setProfileImage(cacheUrl);
 
-        await AsyncStorage.setItem("profile_image", cacheUrl);
+          await AsyncStorage.setItem("profile_image", cacheUrl);
+        }
       }
 
       setStats(statsData);
@@ -282,7 +287,11 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity onPress={pickImage} style={styles.profileButton}>
             {profileImage ? (
               <Image
-                source={{ uri: profileImage }}
+                source={
+                  profileImage
+                    ? { uri: profileImage }
+                    : require("../assets/default-avatar.png")
+                }
                 key={profileImage}
                 style={styles.profileImage}
               />
