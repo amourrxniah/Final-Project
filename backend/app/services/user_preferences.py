@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.user_preference import UserPreference
 
 class UserPreferenceEngine:
-    def __init__(self, db: Session, user_id, int):
+    def __init__(self, db: Session, user_id: int):
         self.db = db
         self.user_id = user_id
 

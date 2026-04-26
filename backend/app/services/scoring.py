@@ -110,9 +110,9 @@ def total_score(
     price_sc: float = 0.5
 ):
     return (
-        (mood_sc * 0.35) + 
+        (mood_sc * 0.45) + 
         (weather_sc * 0.20) + 
-        (distance_sc * 0.25) + 
-        (time_sc * 0.15) + 
-        (price_sc * 0.10))
+        (distance_sc * 0.20) + 
+        (time_sc * 0.10) + 
+        (price_sc * 0.05))
 

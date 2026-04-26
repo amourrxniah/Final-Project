@@ -39,39 +39,17 @@ export default function ProductionChart({ data, viewMode }) {
       timestamp: d.timestamp || 0,
     }));
 
-    // find last real log index
-    const lastRealIndex = [...cleaned]
-      .map((d, i) => (d.hasData ? i : -1))
-      .filter((i) => i !== -1)
-      .pop();
+    let lastValue = 1; // start neutral
 
-    let decayStep = 0;
-    const decayRate = 0.25; // smaller = slower return
-
-    return cleaned.map((d, i) => {
-      // before last real log
-      if (i <= lastRealIndex) {
-        return d.hasData ? d : { ...d, value: 1 };
+    return cleaned.map((d) => {
+      if (d.hasData) {
+        lastValue = d.value;
+        return d;
       }
 
-      // after last real log return to neutral
-      decayStep++;
-
-      const lastVal = cleaned[lastRealIndex]?.value ?? 1;
-
-      let val = lastVal;
-
-      if (lastVal < 1) {
-        val = Math.min(1, lastVal + decayStep * decayRate);
-      } else if (lastVal > 1) {
-        // coming down from high
-        val = Math.max(1, lastVal - decayStep * decayRate);
-      } else {
-        val = 1;
-      }
       return {
         ...d,
-        value: val,
+        value: lastValue,
       };
     });
   }, [data]);
@@ -134,6 +112,11 @@ export default function ProductionChart({ data, viewMode }) {
   const graphHeight = chartHeight - paddingTop - paddingBottom;
   const stepY = graphHeight / 2; // 3 mood levels: 0, 1, 2
 
+  const getY = (value) => {
+    const normalised = value / 2;
+    return paddingTop + graphHeight * (1 - normalised);
+  };
+
   const baseSpacing =
     viewMode === "live"
       ? 70
@@ -148,7 +131,7 @@ export default function ProductionChart({ data, viewMode }) {
   /* ---------- DATA TO POINTS ---------- */
   const points = sortedData.map((d, i) => ({
     x: paddingLeft + i * pointSpacing,
-    y: paddingTop + (graphHeight - d.value * stepY),
+    y: getY(d.value),
     ...d,
   }));
 
@@ -187,22 +170,39 @@ export default function ProductionChart({ data, viewMode }) {
   }
 
   /* ---------- CURVES ---------- */
+  const smoothPath = (p1, p2) => {
+    const dx = (p2.x - p1.x) * 0.5;
+
+    // exact top/bottom snapping
+    const clampY = (y) => {
+      if (y <= paddingTop + 2) return paddingTop; // high = top
+      if (y >= chartHeight - paddingBottom - 2)
+        return chartHeight - paddingBottom; // low = bottom
+      return y;
+    };
+
+    const y1 = clampY(p1.y);
+    const y2 = clampY(p2.y);
+
+    return `
+      M ${p1.x} ${y1}
+      C ${p1.x + dx} ${y1},
+        ${p2.x - dx} ${y2},
+        ${p2.x} ${y2},
+    `;
+  };
+
   const segments = [];
   for (let i = 0; i < points.length - 1; i++) {
     const p1 = points[i];
     const p2 = points[i + 1];
-
-    const dx = (p2.x - p1.x) * 0.4;
 
     let color = "#9b5de5";
     if (p2.value > p1.value) color = "#2ec4b6";
     else if (p2.value < p1.value) color = "#ff4fa3";
 
     segments.push({
-      path: `M ${p1.x} ${p1.y}
-             C ${p1.x + dx} ${p1.y}
-               ${p2.x - dx} ${p2.y} 
-               ${p2.x} ${p2.y}`,
+      d: smoothPath(p1, p2),
       color,
     });
   }
@@ -343,10 +343,12 @@ export default function ProductionChart({ data, viewMode }) {
               {segments.map((seg, i) => (
                 <AnimatedPath
                   key={i}
-                  d={seg.path}
+                  d={seg.d}
                   stroke={seg.color}
                   strokeWidth="3"
                   fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   strokeDasharray="1000"
                   strokeDashoffset={progress.interpolate({
                     inputRange: [0, 1],

@@ -99,7 +99,7 @@ export default function HomeScreen({ navigation }) {
         setProfileImage(cacheUrl);
 
         // save locally
-        await AsyncStorage.setItem("profile_image", fullUrl);
+        await AsyncStorage.setItem("profile_image", cacheUrl);
 
         // update global user
         updateUser({ profile_image: uploadedUrl });
@@ -287,11 +287,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity onPress={pickImage} style={styles.profileButton}>
             {profileImage ? (
               <Image
-                source={
-                  profileImage
-                    ? { uri: profileImage }
-                    : require("../assets/default-avatar.png")
-                }
+                source={{ uri: profileImage }}
                 key={profileImage}
                 style={styles.profileImage}
               />

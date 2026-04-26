@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from datetime import datetime, timedelta, timezone
 import math
 import logging
+import random
 
 from app.database import get_db
 from app.models.activity import Activity
+from app.models.activity_log import ActivityLog
+from app.models.recommendation_history import RecommendationHistory
 from app.services.geoapify import get_places
 from app.services.user_preferences import UserPreferenceEngine
 from app.services.scoring import *
@@ -54,12 +58,17 @@ def diversity_penalty(category, seen_categories):
         return 1.0
     
     count = seen_categories.get(category, 0)
-    return max(0.6, 1 - (count * 0.15))
 
-def recency_penalty(activity_id, recent_ids):
+    return max(0.4, 1 - (count * 0.25))
+
+def recency_penalty(activity_id, recent_logs, recent_recs):
     """avoid recommending recently opened items"""
-    if activity_id in recent_ids:
-        return 0.5
+    if activity_id in recent_logs:
+        return 0.3 # hard block
+    
+    if activity_id in recent_recs:
+        return 0.6 # soft block
+    
     return 1.0
     
 def preference_boost(categories, user_prefs):
@@ -91,14 +100,32 @@ def recommendations(
         seen_ids = set()
         seen_categories = {}
 
-        # simulate user behaviour
-        recent_ids = set()
+        now = datetime.now(timezone.utc)
+
+        # ---------- user history ----------
+        recent_logs = set()
+        recent_recs = set()
+        user_prefs = {}
+
+        if user_id:
+            # last 3 days logs
+            logs = db.query(ActivityLog).filter(
+                ActivityLog.user_id == user_id,
+                ActivityLog.timestamp >= now - timedelta(days=3)
+            ).all()
+            recent_logs = {l.activity_id for l in logs}
+
+            # last 24h recommendations
+            recs = db.query(RecommendationHistory).filter(
+                RecommendationHistory.user_id == user_id,
+                RecommendationHistory.timestamp >= now - timedelta(hours=24)
+            )
+            recent_recs = {r.activity_id for r in recs}
+
+        # preferences
         try:
-            if user_id:
-                engine = UserPreferenceEngine(db, user_id)
-                user_prefs = engine.get_user_prefs().get("categories", {})
-            else:
-                user_prefs = {}
+            engine = UserPreferenceEngine(db, user_id)
+            user_prefs = engine.get_user_prefs().get("categories", {})
         except Exception:
             user_prefs = {}
 
@@ -108,11 +135,8 @@ def recommendations(
             func.abs(Activity.longitude - lon) <= 0.2
         ).all()
 
-        for activity in db_items:
-            dist = distance_km(lat, lon, activity.latitude, activity.longitude)
-            categories = activity.category_names or []
-
-            base_score = total_score(
+        def score_activity(activity, categories, dist):
+            base = total_score(
                 mood_score(mood, categories, activity.rating, activity.popularity),
                 weather_score(weather, categories),
                 distance_score(dist),
@@ -123,11 +147,22 @@ def recommendations(
             category_main = categories[0] if categories else None
 
             score = (
-                base_score *
+                base *
                 diversity_penalty(category_main, seen_categories) *
-                recency_penalty(activity.id, recent_ids) *
+                recency_penalty(activity.id, recent_logs, recent_recs) *
                 preference_boost(categories, user_prefs)
             )
+
+            # exploration
+            score *= random.uniform(0.9, 1.1)
+
+            return score
+
+        for activity in db_items:
+            dist = distance_km(lat, lon, activity.latitude, activity.longitude)
+            categories = activity.category_names or []
+
+            score = score_activity(activity, categories, dist)
 
             if score < 0.1:
                 continue
@@ -144,8 +179,8 @@ def recommendations(
 
             seen_ids.add(activity.id)
 
-            if category_main:
-                seen_categories[category_main] = seen_categories.get(category_main, 0) + 1
+            if categories:
+                seen_categories[categories[0]] = seen_categories.get(categories[0], 0) + 1
 
         # --------------- 2. fetch from geoapify ---------------
         api_places = get_places(lat, lon, 30)
@@ -160,7 +195,7 @@ def recommendations(
         
         # --------------- 3. process api data ---------------
         for p in api_places:
-            if len(results) >= 25:
+            if len(results) >= 40:
                 break
 
             pid = p.get("place_id")
@@ -190,28 +225,10 @@ def recommendations(
 
             categories = clean_data.get("category_names", [])
 
-            # score
-            base_score = total_score(
-                mood_score(mood, categories, activity.rating, activity.popularity),
-                weather_score(weather, categories),
-                distance_score(dist),
-                time_score(time_of_day, categories),
-                price_score(activity.price, mood)
-            )
-
-            category_main = categories[0] if categories else None
-
-            score = (
-                base_score *
-                diversity_penalty(category_main, seen_categories) *
-                recency_penalty(activity.id, recent_ids) *
-                preference_boost(categories, user_prefs)
-            )
+            score = score_activity(activity, categories, dist)
 
             if score < 0.1:
                 continue
-
-            activity.score = score
 
             # add to results
             if activity.id not in seen_ids:
@@ -226,15 +243,39 @@ def recommendations(
                 })
                 seen_ids.add(activity.id)
 
-                if category_main:
-                    seen_categories[category_main] = seen_categories.get(category_main, 0) + 1
+                if categories:
+                    seen_categories[categories[0]] = seen_categories.get(categories[0], 0) + 1
 
         db.commit()
         
         #final ranking
         results.sort(key=lambda x: x["score"], reverse=True)
+
+        # ---------- FORCE DIVERSITY ----------
+        final = []
+        used_categories = set()
+
+        for item in results:
+            categories = (item.get("category_names") or ["other"])[0]
+
+            if categories not in used_categories or len(final) < 10:
+                final.append(item)
+                used_categories.add(categories)
+            
+            if len(final) >= 25:
+                break
         
-        return results[:25]
+        # ---------- SAVE HISTORY ----------
+        if user_id:
+            for item in final:
+                db.add(RecommendationHistory(
+                    user_id=user_id,
+                    activity_id=item["id"]
+                ))
+            db.commit()
+            
+        return final
+        
 
     except Exception as e:
         logger.exception("Recommendation error")
