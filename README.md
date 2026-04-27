@@ -2,16 +2,18 @@
 
 ## Project Overview
 
-MoodSync is a mobile application build using React Native and Expo that provides personalised activity recommendations based on a user's mood, energy level, and environmental context (e.g., time of day and weather).
+MoodSync is a mobile application built using React Native and Expo that provides personalised activity recommendations based on a user's mood, energy level, and environmental context (e.g., time of day and weather).
 
 The system integrates a FastAPI backend to generalise intelligent recommendations and track user interactions over time.
+
+This project demonstrates an end-to-end intelligent recommendation system where user input is processed by a backend service and returned as personalised activity suggestions.
 
 ---
 
 ## Core Features
 
 - Mood-based activity recommendations
-- Contetn awareness (Weather, time, location)
+- Content awareness (Weather, time, location)
 - Activity feedback system (like/dislike)
 - Mood tracking and statistics
 - Achievement system
@@ -37,7 +39,7 @@ The system integrates a FastAPI backend to generalise intelligent recommendation
 
 ```bash
 git clone https://github.com/amourrxniah/Final-Project.git
-cd Final Project
+cd Final-Project
 ```
 
 ---
@@ -107,11 +109,11 @@ This confirms **end_to_end functionality**
 
 ### APK Build Limitation
 
-An attempt was made to distribute the app as a downloadable Androi APK using Expo EAS Build. However, due to environment related build issues such as system conflicts and packaging errors, this was not successfully completed within the timeframe.
+An attempt was made to distribute the app as a downloadable Android APK using Expo EAS Build. However, due to environment related build issues such as system conflicts and packaging errors, this was not successfully completed within the timeframe.
 
-Additionally, requiring users to download an APK may introduce frition, whereas Expo Go provides a faster and more accessible testing experience.
+Additionally, requiring users to download an APK may introduce friction, whereas Expo Go provides a faster and more accessible testing experience.
 
-Therefore, the application is delivered via Expo Go for demonstration purposes.
+Therefore, the application is delivered via Expo Go for demonstration purposes. This decision aligns with usability considerations, as requiring installation may discourage users, whereas Expo Go enables immediate access and testing.
 
 ### Technical Decisions
 
@@ -148,30 +150,37 @@ Watch the demo here:
 GitHub Repository:
 https://github.com/amourrxniah/Final-Project.git
 
-### Test Cases
+## Test Cases
 
 The following manual test cases were used to validate system functionality:
 
-## Test Case 1 - Mood Recommendation Flow
+#### Test Case 1 - Mood Recommendation Flow
 
 **Input:** User selects mood (e.g., "low energy")
+
 **Expected Output:** Relevant activities displayed
+
 **Result:** PASS
 
 ---
 
-## Test Case 2 - Context Detection
+### Test Case 2 - Context Detection
 
 **Input:** Location Enabled
-**Expected Output:** Weather + time was used in recommendations
+
+**Expected Output:** Weather + time was used in
+recommendations
+
 **Result:** PASS
 
 ---
 
-## Test Case 3 - Activity Feedback
+### Test Case 3 - Activity Feedback
 
 **Input:** User likes/dislikes activity
+
 **Expected Output:** Feedback stored and reflected in profile
+
 **Result:** PASS
 
 ---
@@ -179,7 +188,9 @@ The following manual test cases were used to validate system functionality:
 ## Test Case 4 - Profile Data Update
 
 **Input:** User interacts with activities
+
 **Expected Output:** Stats and history updated
+
 **Result:** PASS
 
 ---
@@ -187,9 +198,11 @@ The following manual test cases were used to validate system functionality:
 ## Test Case 5 - Consent System
 
 **Input:** User accepts privacy policy
-**Expected OutputL** Access granted to app
+
+**Expected Output:** Access granted to app
+
 **Result:** PASS
 
 ### Conclusion
 
-MoodSync successfully demonstrates a working prototype of a conext-aware recommendation system. While not fully production-ready, the core functionality works end to end and validates the project concept.
+MoodSync successfully demonstrates a working prototype of a context-aware recommendation system. While not fully production-ready, the core functionality works end to end and validates the project concept.
