@@ -64,7 +64,7 @@ def diversity_penalty(category, seen_categories):
 def recency_penalty(activity_id, recent_logs, recent_recs):
     """avoid recommending recently opened items"""
     if activity_id in recent_logs:
-        return 0.3 # hard block
+        return 0.1 # hard block
     
     if activity_id in recent_recs:
         return 0.6 # soft block
@@ -151,7 +151,8 @@ def recommendations(
                 base *
                 diversity_penalty(category_main, seen_categories) *
                 recency_penalty(activity.id, recent_logs, recent_recs) *
-                preference_boost(categories, user_prefs)
+                preference_boost(categories, user_prefs) *
+                night_safety_filter(categories, time_of_day)
             )
 
             # exploration
@@ -165,7 +166,7 @@ def recommendations(
 
             score = score_activity(activity, categories, dist)
 
-            if score < 0.1:
+            if score < 0.05:
                 continue
 
             results.append({
@@ -228,7 +229,7 @@ def recommendations(
 
             score = score_activity(activity, categories, dist)
 
-            if score < 0.1:
+            if score < 0.05:
                 continue
 
             # add to results
@@ -263,7 +264,7 @@ def recommendations(
                 final.append(item)
                 used_categories.add(categories)
             
-            if len(final) >= 25:
+            if len(final) >= 50:
                 break
         
         # ---------- SAVE HISTORY ----------
