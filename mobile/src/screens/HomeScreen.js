@@ -33,6 +33,7 @@ import {
   updateUserProfile,
   BACKEND_URL,
 } from "../components/api";
+import Avatar from "../components/Avatar";
 import { useUser } from "../components/UserContext";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -285,6 +286,7 @@ export default function HomeScreen({ navigation }) {
         {/* HEADER */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={pickImage} style={styles.profileButton}>
+            <Avatar uri={profileImage} size={70} />
             {profileImage ? (
               <Image
                 source={{ uri: profileImage }}

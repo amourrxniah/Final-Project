@@ -4,10 +4,11 @@
     "slug": "mobile",
     "version": "1.0.0",
     "scheme": "moodsync",
+    "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,7 +22,7 @@
       }
     },
     "android": {
-      "package": "com.moodsync.app",
+      "package": "com.nprvx.moodsync",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -48,7 +49,8 @@
     "plugins": [
       "expo-asset",
       "expo-web-browser",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "extra": {
       "redirectUri": "moodsync://auth",
