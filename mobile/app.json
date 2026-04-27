@@ -4,7 +4,7 @@
     "slug": "mobile",
     "version": "1.0.0",
     "scheme": "moodsync",
-    "platforms": ["android"],
+    "platforms": ["android", "web"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

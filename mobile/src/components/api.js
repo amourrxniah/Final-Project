@@ -354,7 +354,9 @@ export const uploadProfileImg = async (image) => {
 
   console.log("UPLOAD RESPONSE:", res.data);
 
-  return res.data.profile_image;
+  return res.data.profile_image.startsWith("http")
+    ? res.data.profile_image
+    : `${BACKEND_URL}${res.data.profile_image}`;
 };
 
 /* -------------------- PROFILE -------------------- */

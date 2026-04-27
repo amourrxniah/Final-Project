@@ -60,7 +60,7 @@ export default function HomeScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
 
   const [viewMode, setViewMode] = useState("live");
-  const { updateUser } = useUser();
+  const { updateUser, getProfileImage, user } = useUser();
 
   /* -------------------- PICK IMAGE-------------------- */
   const pickImage = async () => {
@@ -103,6 +103,7 @@ export default function HomeScreen({ navigation }) {
 
         // update global user
         updateUser({ profile_image: uploadedUrl });
+        setProfileImage(`${uploadedUrl}?t=${Date.now()}`);
 
         Alert.alert("Success", "Profile picture updated!");
       } catch (e) {
@@ -151,18 +152,12 @@ export default function HomeScreen({ navigation }) {
 
       setName(user.name || user.username || "User");
 
-      if (user.profile_image) {
-        const imageUrl = user.profile_image.startsWith("http")
-          ? user.profile_image
-          : `${BACKEND_URL}/${user.profile_image}`;
+      const resolvedImage = getProfileImage();
 
-        // only upate if different
-        if (!cachedImage || !cachedImage.includes(imageUrl)) {
-          const cacheUrl = `${imageUrl}?t=${Date.now()}`;
-          setProfileImage(cacheUrl);
-
-          await AsyncStorage.setItem("profile_image", cacheUrl);
-        }
+      if (resolvedImage) {
+        const cacheUrl = `${resolvedImage}?t=${Date.now()}`;
+        setProfileImage(cacheUrl);
+        await AsyncStorage.setItem("profile_image", cacheUrl);
       }
 
       setStats(statsData);
@@ -285,14 +280,25 @@ export default function HomeScreen({ navigation }) {
                 source={{ uri: profileImage }}
                 key={profileImage}
                 style={styles.profileImage}
+                onError={() => {
+                  console.log("Image failed to load:", profileImage);
+                  setProfileImage(null);
+                }}
               />
             ) : (
               <View style={styles.profileIcon}>
-                <MaterialCommunityIcons
+                <LinearGradient
+                  colors={["#6a11cb", "#2575fc"]}
+                  start={{ x: 0, y: 0}}
+                  style={styles.profileImage}
+                >
+                  <MaterialCommunityIcons
                   name="account-outline"
                   size={50}
-                  color="#9b5de5"
+                  color="#fff"
                 />
+                </LinearGradient>
+                
               </View>
             )}
             <View style={styles.editIconOverlay}>
