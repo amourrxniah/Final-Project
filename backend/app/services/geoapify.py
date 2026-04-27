@@ -10,11 +10,14 @@ CATEGORY_GROUPS = [
     ["catering.restaurant", "catering.cafe"],
     ["entertainment.cinema","entertainment.museum"],
     ["leisure.park"],
-    ["sport.fitness"]
+    ["sport.fitness"],
+    ["sport.fitness.yoga"],
+    ["healthcare.spa"],
+    ["leisure.wellness"]
 ]
 
 # -------------------- FETCH PLACES --------------------
-def get_places(lat, lon, limit=30):
+def get_places(lat, lon, limit=80):
     all_places = []
     seen_ids = set()
 

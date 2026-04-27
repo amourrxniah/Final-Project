@@ -116,3 +116,39 @@ def total_score(
         (time_sc * 0.10) + 
         (price_sc * 0.05))
 
+def night_safety_filter(categories, time_of_day):
+    if time_of_day != "night":
+        return 1.0
+    
+    if not categories:
+        return 0.5
+    
+    categories = [c.lower() for c in categories]
+
+    SAFE_NIGHT = [
+        "cafe",
+        "restaurant",
+        "gym",
+        "fitness",
+        "yoga",
+        "spa",
+        "wellness",
+        "cinema"
+    ]
+
+    UNSAFE_NIGHT = [
+        "park",
+        "nature",
+        "trail",
+        "museum",
+        "gallery"
+    ]
+
+    if any(k in c for c in categories for k in SAFE_NIGHT):
+        return 1.2 # boost safe places
+    
+    if any(k in c for c in categories for k in UNSAFE_NIGHT):
+        return 0.3 # boost safe places
+    
+    return 0.7
+
