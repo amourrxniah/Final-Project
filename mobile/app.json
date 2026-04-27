@@ -4,7 +4,9 @@
     "slug": "mobile",
     "version": "1.0.0",
     "scheme": "moodsync",
-    "platforms": ["android", "web"],
+    "platforms": [
+      "android"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -26,22 +28,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "moodsync"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        }
-      ]
+      }
+      
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -57,6 +45,12 @@
       "eas": {
         "projectId": "7097664b-5a2e-4523-b940-48273895ffdd"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7097664b-5a2e-4523-b940-48273895ffdd"
     }
   }
 }

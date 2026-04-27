@@ -286,19 +286,18 @@ export default function HomeScreen({ navigation }) {
                 }}
               />
             ) : (
-              <View style={styles.profileIcon}>
+              <View style={styles.profileImage}>
                 <LinearGradient
                   colors={["#6a11cb", "#2575fc"]}
-                  start={{ x: 0, y: 0}}
+                  start={{ x: 0, y: 0 }}
                   style={styles.profileImage}
                 >
                   <MaterialCommunityIcons
-                  name="account-outline"
-                  size={50}
-                  color="#fff"
-                />
+                    name="account-outline"
+                    size={50}
+                    color="#fff"
+                  />
                 </LinearGradient>
-                
               </View>
             )}
             <View style={styles.editIconOverlay}>
