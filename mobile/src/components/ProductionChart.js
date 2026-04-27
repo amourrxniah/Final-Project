@@ -32,26 +32,15 @@ export default function ProductionChart({ data, viewMode }) {
   const safeData = useMemo(() => {
     if (!Array.isArray(data)) return [];
 
-    const cleaned = data.map((d) => ({
-      value: Math.max(0, Math.min(2, Number(d.value))),
+    return data.map((d) => ({
+      value:
+        d.has_data && d.value !== null && d.value !== undefined
+          ? Math.max(0, Math.min(2, Number(d.value)))
+          : 1, // always fallback to neutral
       label: d.time || d.day || "",
       hasData: !!d.has_data,
       timestamp: d.timestamp || 0,
     }));
-
-    let lastValue = 1; // start neutral
-
-    return cleaned.map((d) => {
-      if (d.hasData) {
-        lastValue = d.value;
-        return d;
-      }
-
-      return {
-        ...d,
-        value: lastValue,
-      };
-    });
   }, [data]);
 
   const sortedData = useMemo(() => {

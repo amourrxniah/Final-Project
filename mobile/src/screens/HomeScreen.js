@@ -33,7 +33,6 @@ import {
   updateUserProfile,
   BACKEND_URL,
 } from "../components/api";
-import Avatar from "../components/Avatar";
 import { useUser } from "../components/UserContext";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -181,7 +180,10 @@ export default function HomeScreen({ navigation }) {
       const data = await getMoodTrend(mode);
       const safeData = (data || []).map((d) => ({
         ...d,
-        value: Math.max(0, Math.min(2, Number(d.value) || 1)),
+        value:
+          d.value === null || d.value === undefined
+            ? null
+            : Math.max(0, Math.min(2, Number(d.value))),
         has_data: d.has_data ?? true,
       }));
 
@@ -210,14 +212,6 @@ export default function HomeScreen({ navigation }) {
   /* -------------------- TREND MODE CHANGE -------------------- */
   useEffect(() => {
     loadTrend(viewMode);
-  }, [viewMode]);
-
-  /* -------------------- AUTO REFRESH TREND -------------------- */
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadTrend(viewMode);
-    }, 30000); //every 30s
-    return () => clearInterval(interval);
   }, [viewMode]);
 
   /* -------------------- PULL TO REFRESH -------------------- */
@@ -286,7 +280,6 @@ export default function HomeScreen({ navigation }) {
         {/* HEADER */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={pickImage} style={styles.profileButton}>
-            <Avatar uri={profileImage} size={70} />
             {profileImage ? (
               <Image
                 source={{ uri: profileImage }}
@@ -298,7 +291,7 @@ export default function HomeScreen({ navigation }) {
                 <MaterialCommunityIcons
                   name="account-outline"
                   size={50}
-                  color="#fff"
+                  color="#9b5de5"
                 />
               </View>
             )}

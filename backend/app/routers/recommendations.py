@@ -259,7 +259,7 @@ def recommendations(
         for item in results:
             categories = (item.get("category_names") or ["other"])[0]
 
-            if categories not in used_categories or len(final) < 10:
+            if categories not in used_categories or len(final) < 20:
                 final.append(item)
                 used_categories.add(categories)
             
