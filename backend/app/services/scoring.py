@@ -26,11 +26,14 @@ mood_keywords = {
 
 INDOOR_KEYWORDS = [
     "cafe", "restaurant", "cinema", "museum",
-    "gallery", "mall", "gym"
+    "gallery", "mall", "meditation", "wellness",
+    "book", "library", "music", "breathing", "mindfulness",
+    "journal", "yoga"
 ]
 
 OUTDOOR_KEYWORDS = [
-    "park", "nature", "trail", "beach", "stadium"
+    "park", "nature", "trail", "beach", "stadium", "entertainment",
+    "gym"
 ]
 
 def mood_score(mood: str, categories: list, rating: float = 0, popularity: float = 0):

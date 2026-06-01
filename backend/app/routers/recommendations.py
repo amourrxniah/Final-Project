@@ -278,7 +278,7 @@ def recommendations(
                     wb["popularity"]
                 ),
                 weather_score(weather, categories),
-                distance_score(1.0), # home activities =
+                1.0, # home = perfect distance 
                 time_score(time_of_day, categories),
                 price_score(wb["price"], mood)
             )
@@ -365,11 +365,29 @@ def recommendations(
         #final ranking
         results.sort(key=lambda x: x["score"], reverse=True)
 
-        # ---------- FORCE DIVERSITY ----------
+        # ---------- FORCE DIVERSITY + WELLBEING ----------
         final = []
         used_categories = set()
 
-        for item in results:
+        # separate wellbeing + API
+        wellbeing_items = [
+            r for r in results
+            if r.get("virtual") is True
+        ]
+
+        place_items = [
+            r for r in results
+            if not r.get("virtual")
+        ]
+
+        # keep top wellbeing
+        top_wellbeing = wellbeing_items[:7]
+
+        for item in top_wellbeing:
+            final.append(item)
+        
+        # fill with normal activities        
+        for item in place_items:
             categories = (item.get("category_names") or ["other"])[0]
 
             if categories not in used_categories or len(final) < 20:
