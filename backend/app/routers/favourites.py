@@ -16,11 +16,34 @@ def create_favourite(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Check if the activity exists
+    activity_id = str(fav.activity_id)
+    
+    # wellbeing
+    if activity_id.startswith("wb_"):
+
+        existing = db.query(Favourite).filter(
+            Favourite.user_id == current_user.id,
+            Favourite.virtual_activity_id == activity_id
+        ).first()
+        
+        if existing:
+            return existing
+
+        favourite = Favourite(
+            user_id=current_user.id, 
+            virtual_activity_id=activity_id
+        )
+        
+        db.add(favourite)
+        db.commit()
+        db.refresh(favourite)
+        
+        return favourite
+    
+    # Check if the normal activity exists
     activity = db.query(Activity).filter(
         Activity.id == fav.activity_id
     ).first()
-    
     
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
@@ -52,10 +75,17 @@ def remove_favourite(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    favourite = db.query(Favourite).filter(
-        Favourite.user_id == current_user.id,
-        Favourite.activity_id == activity_id
-    ).first()
+    # wellbeing
+    if activity_id.startswith("wb_"):
+        favourite = db.query(Favourite).filter(
+            Favourite.user_id == current_user.id,
+            Favourite.virtual_activity_id == activity_id
+        ).first()
+    else:
+        favourite = db.query(Favourite).filter(
+            Favourite.user_id == current_user.id,
+            Favourite.activity_id == activity_id
+        ).first()
 
     if not favourite:
         raise HTTPException(status_code=404, detail="Favourite not found")
@@ -71,10 +101,17 @@ def check_favourite(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    favourite = db.query(Favourite).filter(
-        Favourite.user_id == current_user.id,
-        Favourite.activity_id == activity_id
-    ).first()
+   # wellbeing
+    if activity_id.startswith("wb_"):
+        favourite = db.query(Favourite).filter(
+            Favourite.user_id == current_user.id,
+            Favourite.virtual_activity_id == activity_id
+        ).first()
+    else:
+        favourite = db.query(Favourite).filter(
+            Favourite.user_id == current_user.id,
+            Favourite.activity_id == activity_id
+        ).first()
 
     return {
         "is_favourite": favourite is not None

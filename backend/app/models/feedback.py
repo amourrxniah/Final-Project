@@ -7,8 +7,9 @@ class Feedback(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    activity_id = Column(Integer, ForeignKey("activities.id"))
-    
+    activity_id = Column(Integer, ForeignKey("activities.id"), nullable=True)
+    virtual_activity_id = Column(String, nullable=True)
+
     type = Column(String, nullable=True) #up/down
     rating = Column(Integer, nullable=True) #1-5
 
@@ -19,6 +20,7 @@ class Feedback(Base):
         UniqueConstraint(
             "user_id", 
             "activity_id", 
+            "virtual_activity_id",
             name="unique_user_activity_feedback"
         ),
     )

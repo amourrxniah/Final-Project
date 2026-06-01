@@ -135,21 +135,31 @@ export const deriveTips = (categories = []) => {
 };
 
 export const findSimilarActivities = (current, all) => {
-  const currentCats = (current.category_names || []).join(" ").toLowerCase();
+  const currentCats = (current.category_names || []).map((cat) =>
+    cat.toLowerCase(),
+  );
 
   return all
     .filter((a) => a.id !== current.id)
     .map((a) => {
-      const cats = (a.category_names || []).join(" ").toLowerCase();
+      const cats = (a.category_names || []).map((cat) => cat.toLowerCase());
 
       let score = 0;
 
-      if (cats.includes("cafe") && currentCats.includes("cafe")) score++;
-      if (cats.includes("restaurant") && currentCats.includes("restaurant"))
-        score++;
-      if (cats.includes("park") && currentCats.includes("park")) score++;
-      if (cats.includes("museum") && currentCats.includes("museum")) score++;
-      if (cats.includes("cinema") && currentCats.includes("cinema")) score++;
+      currentCats.forEach((currentCat) => {
+        cats.forEach((cat) => {
+          if (cat.includes(currentCat) || currentCat.includes(cat)) {
+            score++;
+          }
+        });
+      });
+
+      // if (cats.includes("cafe") && currentCats.includes("cafe")) score++;
+      // if (cats.includes("restaurant") && currentCats.includes("restaurant"))
+      //   score++;
+      // if (cats.includes("park") && currentCats.includes("park")) score++;
+      // if (cats.includes("museum") && currentCats.includes("museum")) score++;
+      // if (cats.includes("cinema") && currentCats.includes("cinema")) score++;
 
       return { ...a, score };
     })

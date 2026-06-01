@@ -8,6 +8,7 @@ class ActivityLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     activity_id = Column(Integer, ForeignKey("activities.id"))
+    virtual_activity_id = Column(String, nullable=True)
     title = Column(String)
     timestamp = Column(
         DateTime(timezone=True),
