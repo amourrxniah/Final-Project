@@ -299,11 +299,20 @@ def recommendations(
         # --------------- 2. fetch from geoapify ---------------
         api_places = get_places(lat, lon, 30)
 
-        place_ids = [p["place_id"] for p in api_places if p.get("place_id")]
+        place_ids = [
+            p["place_id"] 
+            for p in api_places 
+            if p.get("place_id")
+        ]
 
-        existing = db.query(Activity).filter(
-            Activity.place_id.in_(place_ids)
-        ).all()
+        existing = []
+        
+        if place_ids:
+            existing = (
+                db.query(Activity)
+                .filter(Activity.place_id.in_(place_ids))
+                .all()
+            )
 
         existing_map = {e.place_id: e for e in existing}
         
@@ -400,6 +409,11 @@ def recommendations(
         # ---------- SAVE HISTORY ----------
         if user_id:
             for item in final:
+
+                # skip home / vrtual activities
+                if item.get("virtual"):
+                    continue
+
                 db.add(RecommendationHistory(
                     user_id=user_id,
                     activity_id=item["id"]
