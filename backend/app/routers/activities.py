@@ -128,10 +128,15 @@ def get_my_activities(
 
 @router.post("/log/{activity_id}")
 def log_activity(
-    activity_id: int,
+    activity_id: str,
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
+    # virtual wellbeing
+    if activity_id.startswith("wb_"):
+        return {"message": "Wellbeing activity logged"}
+    activity_id = int(activity_id)
+    
     existing = db.query(ActivityLog).filter(
         ActivityLog.user_id == user.id,
         ActivityLog.activity_id == activity_id
