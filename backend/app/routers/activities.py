@@ -302,7 +302,7 @@ def log_activity(
     db.add(log)
     db.commit()
         
-    return {"status": "Wellnbeing activity logged successfully"}
+    return {"status": "Wellbeing activity logged successfully"}
 
 @router.get("/search")
 def search_activities(
