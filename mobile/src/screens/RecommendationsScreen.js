@@ -43,6 +43,10 @@ const CATEGORY_ICON_MAP = [
   { match: ["fitness", "sport", "gym"], icon: "dumbbell" },
   { match: ["restaurant", "cafe", "bar"], icon: "silverware-fork-knife" },
   { match: ["shopping", "commercial", "mall"], icon: "shopping" },
+  { match: ["library", "book"], icon: "book-open" },
+  { match: ["music", "concert", "live"], icon: "music" },
+  { match: ["yoga", "meditation", "wellbeing", "mindfulness"], icon: "meditation" },
+  { match: ["journal", "writing", "creative"], icon: "pencil" },
 ];
 
 const getCategoryIcon = (categories = []) => {

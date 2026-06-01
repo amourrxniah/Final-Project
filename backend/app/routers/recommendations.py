@@ -17,6 +17,87 @@ from app.services.scoring import *
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
+# -------------------- WELLBEING ACTIVITIES --------------------
+WELLBEING_ACTIVITIES = [
+    {
+        "id": "wb_book",
+        "title": "Read a Book",
+        "subtitle": "Slow down and enjoy a calming read",
+        "category_names": ["book", "library", "relax"],
+        "categories": ["wellbeing"],
+        "distance": 0,
+        "rating": 4.8,
+        "price": 1,
+        "popularity": 0.7
+    },
+    {
+        "id": "wb_meditation",
+        "title": "Meditation",
+        "subtitle": "Find a quiet space and meditate for 10 minutes",
+        "category_names": ["meditation", "wellness", "relax"],
+        "categories": ["wellbeing"],
+        "distance": 0,
+        "rating": 4.8,
+        "price": 1,
+        "popularity": 0.75
+    },
+    {
+        "id": "wb_yoga",
+        "title": "Yoga Practice",
+        "subtitle": "Do a 20-minute yoga routine",
+        "category_names": ["yoga", "fitness", "wellness"],
+        "categories": ["wellbeing"],
+        "distance": 0,
+        "rating": 4.9,
+        "price": 1,
+        "popularity": 0.8
+    },
+    {
+        "id": "wb_walk",
+        "title": "Nature Walk",
+        "subtitle": "Take a 30-minute walk in a nearby park",
+        "category_names": ["walk", "nature", "park"],
+        "categories": ["wellbeing"],
+        "distance": 0,
+        "rating": 4.7,
+        "price": 1,
+        "popularity": 0.85
+    },
+    {
+        "id": "wb_music",
+        "title": "Listen to Music",
+        "subtitle": "Play your favorite songs and relax",
+        "category_names": ["music", "entertainment", "relax", "concert"],
+        "categories": ["wellbeing"],
+        "distance": 0,
+        "rating": 4.6,
+        "price": 1,
+        "popularity": 0.8
+    },
+    {
+        "id": "wb_breathing",
+        "title": "Breathing Exercise",
+        "subtitle": "Try a 5-minute guided breathing exercise",
+        "category_names": ["breathing", "wellness", "relax"],
+        "categories": ["wellbeing"],
+        "distance": 0,
+        "rating": 4.9,
+        "price": 1,
+        "popularity": 0.65
+    },
+    {
+        "id": "wb_journaling",
+        "title": "Journaling",
+        "subtitle": "Write down your thoughts and feelings for 15 minutes",
+        "category_names": ["journal", "mindfulness", "wellness", "creative", "writing"],
+        "categories": ["wellbeing"],
+        "distance": 0,
+        "rating": 4.7,
+        "price": 1,
+        "popularity": 0.65
+    }
+]
+
 # -------------------- DISTANCE HELPER --------------------
 def distance_km(lat1, lon1, lat2, lon2):
     R = 6371 #radius in km
@@ -183,6 +264,37 @@ def recommendations(
 
             if categories:
                 seen_categories[categories[0]] = seen_categories.get(categories[0], 0) + 1
+
+        
+        # --------------- wellbeing activities ---------------
+        for wb in WELLBEING_ACTIVITIES:
+            categories = wb["category_names"]
+
+            score = total_score(
+                mood_score(
+                    mood,
+                    categories,
+                    wb["rating"],
+                    wb["popularity"]
+                ),
+                weather_score(weather, categories),
+                distance_score(1.0), # home activities =
+                time_score(time_of_day, categories),
+                price_score(wb["price"], mood)
+            )
+
+            score *= preference_boost(categories, user_prefs)
+
+            results.append({
+                "id": wb["id"],
+                "title": wb["title"],
+                "subtitle": wb["subtitle"],
+                "category": wb["categories"],
+                "category_names": categories,
+                "distance": 0,
+                "score": round(score, 3),
+                "virtual": True
+            })
 
         # --------------- 2. fetch from geoapify ---------------
         api_places = get_places(lat, lon, 30)

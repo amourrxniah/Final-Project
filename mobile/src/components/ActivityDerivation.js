@@ -31,6 +31,19 @@ export const deriveTags = (categories = []) => {
     tags.push("Active");
   if (joined.includes("library") || joined.includes("book"))
     tags.push("Relaxing");
+  if (
+    joined.includes("music") ||
+    joined.includes("concert") ||
+    joined.includes("entertainment")
+  )
+    tags.push("Wellbeing");
+
+  if (
+    joined.includes("journal") ||
+    joined.includes("writing") ||
+    joined.includes("creative")
+  )
+    tags.push("Mindfulness");
 
   return tags;
 };

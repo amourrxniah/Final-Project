@@ -8,9 +8,20 @@ def normalise_cat(categories):
     return categories
 
 mood_keywords = {
-    "low": ["museum", "gallery", "park", "relax", "nature"],
-    "neutral": ["cafe", "restaurant", "shop", "cinema"],
-    "high": ["nightclub", "fitness", "sports", "entertainment"]
+    "low": [
+        "museum", "gallery", "park", "relax", "nature", "breathing",
+        "book", "meditation", "journal", "wellness", "music", "mindfulness"
+    ],
+
+    "neutral": [
+        "cafe", "restaurant", "shop", "cinema", 
+        "library", "walk", "yoga", "wellness", "breathing"
+    ],
+
+    "high": [
+        "nightclub", "fitness", "sports", "entertainment",
+        "gym", "yoga", "active"
+    ]
 }
 
 INDOOR_KEYWORDS = [
