@@ -134,7 +134,8 @@ def log_activity(
 ):
     # virtual wellbeing
     if activity_id.startswith("wb_"):
-        return {"message": "Wellbeing activity logged"}
+        return {
+            "message": "Wellbeing activity logged"}
     activity_id = int(activity_id)
     
     existing = db.query(ActivityLog).filter(

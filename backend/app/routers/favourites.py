@@ -48,7 +48,7 @@ def create_favourite(
 
 @router.delete("/{activity_id}")
 def remove_favourite(
-    activity_id: int,
+    activity_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -67,7 +67,7 @@ def remove_favourite(
 
 @router.get("/{activity_id}")
 def check_favourite(
-    activity_id: int,
+    activity_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

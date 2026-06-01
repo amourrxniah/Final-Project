@@ -48,7 +48,7 @@ def save_feedback(
 
 @router.get("/{activity_id}")
 def get_feedback(
-    activity_id: int,
+    activity_id: str,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):

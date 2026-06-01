@@ -206,7 +206,7 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         timestamp: new Date().toISOString(),
       });
 
-      setFeedbackMsg("Got it — we'll improve your future recommendations ✨");
+      setFeedbackMsg(true);
       setTimeout(() => setFeedbackMsg(null), 3000);
     } catch (err) {
       console.log("Rating save failed", err?.data || err.message);
@@ -333,7 +333,18 @@ export default function ActivityDetailsScreen({ route, navigation }) {
             handleHelpful={handleHelpful}
           />
 
-          {feedbackMsg && <Text style={styles.feedback}>{feedbackMsg}</Text>}
+          {feedbackMsg && (
+            <Animated.View style={styles.feedbackCard}>
+              <View style={styles.feedbackIcon}>
+                <Text style={styles.feedbackEmoji}>✨</Text>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.feedbackTitle}>Thanks for the feedback !!</Text>
+                <Text style={styles.feedbackText}> We'll improve your future recommendations</Text>
+              </View>
+            </Animated.View>
+          )}
         </ScrollView>
       </View>
 
@@ -620,4 +631,8 @@ const styles = StyleSheet.create({
     color: "#ff4fa3",
     fontWeight: "800",
   },
+
+  feedbackCard: {
+    
+  }
 });
