@@ -242,7 +242,19 @@ def recommendations(
             return score
 
         for activity in db_items:
-            dist = distance_km(lat, lon, activity.latitude, activity.longitude)
+            dist = p.get("distance")
+
+            if not dist:
+                if activity.latitude is None and activity.longitude is None:
+                    continue
+
+                dist = distance_km(
+                    lat, 
+                    lon, 
+                    activity.latitude, 
+                    activity.longitude
+                )
+
             categories = activity.category_names or []
 
             score = score_activity(activity, categories, dist)
@@ -346,7 +358,7 @@ def recommendations(
                 activity.longitude
             )
 
-            categories = clean_data.get("category_names", [])
+            categories = clean_data.get("category_names") or []
 
             score = score_activity(activity, categories, dist)
 
@@ -424,5 +436,7 @@ def recommendations(
         
 
     except Exception as e:
-        logger.exception("Recommendation error")
-        raise HTTPException(status_code=500, detail="Failed to fetch")
+        logger.exception(f"Recommendation error: {str(e)}")
+
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
