@@ -242,18 +242,16 @@ def recommendations(
             return score
 
         for activity in db_items:
-            dist = p.get("distance")
+            # skip broken coords
+            if activity.latitude is None or activity.longitude is None:
+                continue
 
-            if not dist:
-                if activity.latitude is None and activity.longitude is None:
-                    continue
-
-                dist = distance_km(
-                    lat, 
-                    lon, 
-                    activity.latitude, 
-                    activity.longitude
-                )
+            dist = distance_km(
+                lat, 
+                lon, 
+                activity.latitude, 
+                activity.longitude
+            )
 
             categories = activity.category_names or []
 
@@ -275,7 +273,9 @@ def recommendations(
             seen_ids.add(activity.id)
 
             if categories:
-                seen_categories[categories[0]] = seen_categories.get(categories[0], 0) + 1
+                seen_categories[categories[0]] = (
+                    seen_categories.get(categories[0], 0) + 1
+                )
 
         
         # --------------- wellbeing activities ---------------
@@ -352,11 +352,17 @@ def recommendations(
                     setattr(activity, k, v)
 
             # distance
-            dist = p.get("distance") or distance_km(
-                lat, lon, 
-                activity.latitude, 
-                activity.longitude
-            )
+            dist = p.get("distance")
+
+            if not dist:
+                if activity.latitude is None or activity.longitude is None:
+                    continue
+
+                dist = distance_km(
+                    lat, lon, 
+                    activity.latitude, 
+                    activity.longitude
+                )
 
             categories = clean_data.get("category_names") or []
 
