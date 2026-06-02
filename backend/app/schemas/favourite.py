@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 class FavouriteCreate(BaseModel):
-    activity_id: Optional[int] = None
+    activity_id: str | int
     virtual_activity_id: Optional[str] = None
 
 class FavouriteResponse(BaseModel):

@@ -149,6 +149,10 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         id: activity.id,
         title: activity.title,
       });
+
+      setTimeout(() => {
+        setUndoItem(null);
+      }, 5000)
     }
 
     //animation
