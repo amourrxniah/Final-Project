@@ -152,6 +152,11 @@ export default function SettingsScreen({ navigation }) {
               icon="shield-outline"
               label="Privacy Policy"
               desc="Review our privacy pracitices"
+              onPress={() =>
+                navigation.navigate("Privacy", {
+                  fromSettings: true
+                })
+              }
             />
 
             <NavRow
