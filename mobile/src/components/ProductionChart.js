@@ -117,8 +117,16 @@ export default function ProductionChart({ data, viewMode }) {
   const stepY = graphHeight / 2; // 3 mood levels: 0, 1, 2
 
   const getY = (value) => {
-    const normalised = value / 2;
-    return paddingTop + graphHeight * (1 - normalised);
+    switch (value) {
+      case 2:
+        return paddingTop; // high = top
+      case 1:
+        return paddingTop + graphHeight / 2; // neutral = middle
+      case 0:
+        return paddingTop + graphHeight; // low = bottom
+      default:
+        return chartHeight - paddingBottom; // fallback to neutral (low bottom)
+    }
   };
 
   const baseSpacing =
@@ -280,7 +288,7 @@ export default function ProductionChart({ data, viewMode }) {
               <SvgText
                 key={v}
                 x={yAxisWidth - 10}
-                y={paddingTop + graphHeight - v * stepY + 4}
+                y={paddingTop + graphHeight - v * stepY + 4} //y={getY(v) + 4}
                 fontSize="12"
                 fill={moodColors[v]}
                 textAnchor="end"

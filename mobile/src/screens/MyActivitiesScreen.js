@@ -155,6 +155,30 @@ const getMetaColor = (type) => {
   }
 };
 
+const shuffleWithPreference = (list) => {
+  const rated = [];
+  const fresh = [];
+
+  list.forEach((a) => {
+    const alreadyRated =
+      a?.is_liked ||
+      a?.is_disliked ||
+      (a?.rating !== null && a?.rating !== undefined);
+
+    if (alreadyRated) rated.push(a);
+    else fresh.push(a);
+  });
+
+  const shuffledFresh = fresh.sort(() => Math.random() - 0.5);
+  const shuffledRated = rated.sort(() => Math.random() - 0.5);
+
+  // 70% new, 30% rated
+  return [
+    ...shuffledFresh.slice(0, Math.ceil(list.length * 0.7)),
+    ...shuffledRated.slice(0, Math.ceil(list.length * 0.3)),
+  ];
+};
+
 export default function MyActivitiesScreen({ navigation }) {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -238,16 +262,20 @@ export default function MyActivitiesScreen({ navigation }) {
       updateStats(list);
 
       // trending = most interacted
-      const trendingSorted = [...list]
-        .sort((a, b) => (b.trending_score || 0) - (a.trending_score || 0))
-        .slice(0, 20); // keep more internally
+      const trendingSorted = shuffleWithPreference(
+        [...list].sort(
+          (a, b) => (b.trending_score || 0) - (a.trending_score || 0),
+        ),
+      ).slice(0, 20); // keep more internally
 
       setTrending(trendingSorted);
 
       // recently added = newest by created_at or id
-      const addedSorted = [...list]
-        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
-        .slice(0, 8);
+      const addedSorted = shuffleWithPreference(
+        [...list].sort(
+          (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
+        ),
+      ).slice(0, 8);
       setRecentlyAdded(addedSorted);
     } catch (err) {
       console.log("Fetch error", err.response?.data || err.message);
@@ -375,7 +403,9 @@ export default function MyActivitiesScreen({ navigation }) {
 
     // tab filter
     if (activeTab === "Total") {
-      list = [...activities].sort((a, b) => getScore(b) - getScore(a));
+      list = shuffleWithPreference(
+        [...activities].sort((a, b) => getScore(b) - getScore(a)),
+      );
     }
 
     if (activeTab === "Favourites") {
@@ -383,7 +413,12 @@ export default function MyActivitiesScreen({ navigation }) {
     }
 
     if (activeTab === "Ratings") {
-      list = list.filter((a) => a.rating || a.is_liked || a.is_disliked);
+      list = list.filter(
+        (a) =>
+          a?.is_liked === true ||
+          a?.is_disliked === true ||
+          (a?.rating !== null && a?.rating !== undefined),
+      );
     }
 
     if (activeTab === "History") {
@@ -420,8 +455,10 @@ export default function MyActivitiesScreen({ navigation }) {
 
     const seen = new Set();
     list = list.filter((item) => {
-      if (!item?.id || seen.has(item.id)) return false;
-      seen.add(item.id);
+      const key = item?.id ?? item?.activity_id ?? item?.wb_id ?? item?.title;
+
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 
