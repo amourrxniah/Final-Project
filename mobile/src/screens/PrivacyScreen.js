@@ -31,8 +31,11 @@ export default function PrivacyScreen({ navigation, route }) {
     const init = async () => {
       const consent = await checkConsent();
 
+      const openedFromSettings = route?.params?.fromSettings;
+      const openedFromProfile = route?.params?.fromProfile;
+
       // only redirect during onboarding
-      if (consent && !route?.params?.fromProfile) {
+      if (consent && !openedFromSettings && !openedFromProfile) {
         navigation.replace("AuthChoice");
       }
     };
@@ -42,7 +45,16 @@ export default function PrivacyScreen({ navigation, route }) {
   const handleAccept = async () => {
     try {
       await acceptConsent();
-      navigation.navigate("AuthChoice");
+
+      if (
+        route?.params?.fromSettings ||
+        route?.params?.fromProfile
+      ) {
+        navigation.goBack();
+        return;
+      }
+
+      navigation.replace("AuthChoice");
     } catch (e) {
       console.log("Failed to save consent", e);
     }
