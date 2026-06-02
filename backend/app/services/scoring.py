@@ -17,7 +17,7 @@ mood_keywords = {
         "cafe", "restaurant", "shop", "cinema", 
         "library", "walk", "yoga", "wellness", "breathing"
     ],
-
+    
     "high": [
         "nightclub", "fitness", "sports", "entertainment",
         "gym", "yoga", "active"
@@ -160,9 +160,7 @@ def night_safety_filter(categories, time_of_day):
 
     if any(k in c for c in categories for k in SAFE_NIGHT):
         return 1.2 # boost safe places
-    
     if any(k in c for c in categories for k in UNSAFE_NIGHT):
         return 0.3 # boost safe places
-    
     return 0.7
 

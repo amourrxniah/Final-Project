@@ -540,21 +540,17 @@ export default function ProfileScreen({ navigation }) {
                       <Text style={styles.emptyText}>No activity yet</Text>
                     </View>
                   ) : (
-                    <FlatList
-                      data={activities}
-                      keyExtractor={(item, index) =>
-                        item.id?.toString() || index.toString()
-                      }
+                    <ScrollView
+                      style={styles.activityScroll}
                       nestedScrollEnabled
-                      scrollEnabled
                       showsVerticalScrollIndicator={false}
-                      style={styles.activityList}
-                      contentContainerStyle={styles.activityListContent}
-                      renderItem={({ item }) => {
+                    >
+                      {activities.map((item, index) => {
                         const style = getActivityStyle(item);
 
                         return (
                           <TouchableOpacity
+                            key={item.id || index}
                             style={styles.activityRow}
                             onPress={() =>
                               navigation.navigate("ActivityDetails", {
@@ -599,7 +595,6 @@ export default function ProfileScreen({ navigation }) {
                                   color="#ef476f"
                                 />
                               )}
-
                               <MaterialCommunityIcons
                                 name="chevron-right"
                                 size={20}
@@ -608,8 +603,8 @@ export default function ProfileScreen({ navigation }) {
                             </View>
                           </TouchableOpacity>
                         );
-                      }}
-                    />
+                      })}
+                    </ScrollView>
                   )}
                 </View>
               </View>
@@ -995,10 +990,15 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 14,
     elevation: 4,
-
+    overflow: "hidden",
+    maxHeight: 340,
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 10,
+  },
+
+  activityScroll: {
+    maxHeight: 280,
   },
 
   activityList: {
