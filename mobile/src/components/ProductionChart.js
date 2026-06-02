@@ -32,15 +32,30 @@ export default function ProductionChart({ data, viewMode }) {
   const safeData = useMemo(() => {
     if (!Array.isArray(data)) return [];
 
-    return data.map((d) => ({
-      value:
-        d.has_data && d.value !== null && d.value !== undefined
-          ? Math.max(0, Math.min(2, Number(d.value)))
-          : 1, // always fallback to neutral
-      label: d.time || d.day || "",
-      hasData: !!d.has_data,
-      timestamp: d.timestamp || 0,
-    }));
+    return data.map((d) => {
+      const moodToValue = (mood) => {
+        switch (String(mood).toLowerCase()) {
+          case "low":
+            return 0;
+          case "neutral":
+            return 1;
+          case "high":
+            return 2;
+          default:
+            return Number(mood) || 1; // fallback to neutral
+        }
+      };
+
+      return {
+        value:
+          d.has_data && d.value !== null && d.value !== undefined
+            ? moodToValue(d.value)
+            : 1, // always fallback to neutral
+        label: d.time || d.day || "",
+        hasData: !!d.has_data,
+        timestamp: d.timestamp || 0,
+      };
+    });
   }, [data]);
 
   const sortedData = useMemo(() => {
@@ -131,22 +146,34 @@ export default function ProductionChart({ data, viewMode }) {
 
   /* ---------- AUTO SCROLL ---------- */
   useEffect(() => {
-    if (!scrollRef.current || !points.length || hasAutoScrolled.current) return;
+    if (!scrollRef.current || !points.length) return;
 
-    setTimeout(() => {
-      let x = 0;
+    const timer = setTimeout(() => {
+      const last = points[points.length - 1];
 
+      if (!last) return;
+
+      // live -> follow newest mood log
       if (viewMode === "live") {
-        const last = points[points.length - 1];
         scrollRef.current?.scrollTo({
-          x: Math.max(0, last.x - 200),
+          x: Math.max(0, last.x - 220),
           animated: true,
         });
+        return;
       }
-      scrollRef.current?.scrollTo({ x, animated: true });
+
+      // other modes -> scroll once only
+      if (hasAutoScrolled.current) return;
+
+      scrollRef.current?.scrollTo({
+        x: Math.max(0, last.x - 220),
+        animated: true,
+      });
+
       hasAutoScrolled.current = true;
     }, 300);
-  }, [points]);
+    return () => clearTimeout(timer);
+  }, [points, scale, viewMode]);
 
   /* ---------- EMPTY STATE ---------- */
   if (!points.length) {
@@ -226,7 +253,7 @@ export default function ProductionChart({ data, viewMode }) {
     Haptics.selectionAsync();
   };
 
-  const moodLabels = ["Low", "Neutral", "High"];
+  const moodLabels = { 0: "Low", 1: "Neutral", 2: "High" };
   const moodColors = ["#ff4fa3", "#9b5de5", "#2ec4b6"];
 
   /* ---------- RENDER ---------- */
@@ -249,7 +276,7 @@ export default function ProductionChart({ data, viewMode }) {
         <View style={{ flexDirection: "row" }}>
           {/* FIXED Y AXIS */}
           <Svg width={yAxisWidth} height={chartHeight}>
-            {[0, 1, 2].map((v) => (
+            {[2, 1, 0].map((v) => (
               <SvgText
                 key={v}
                 x={yAxisWidth - 10}

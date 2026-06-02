@@ -117,15 +117,15 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       const feedback = await getActivityFeedback(activity.id);
       console.log("Activity feedback", feedback);
       setRating(feedback?.rating || 0);
-      setHelpfulState(feedback?.feedback || null);
+      setHelpfulState(feedback?.type || null);
 
       await logActivityOpen(activity.id);
     } catch (err) {
       console.log(
-        "Load user state error", 
+        "Load user state error",
         err?.response?.status,
         err?.response?.data,
-        err.message
+        err.message,
       );
     }
   };
@@ -152,11 +152,11 @@ export default function ActivityDetailsScreen({ route, navigation }) {
 
       setTimeout(() => {
         setUndoItem(null);
-      }, 5000)
+      }, 5000);
     }
 
     //animation
-    if (!heartRef.current && favouritesTargetRef.current) {
+    if (heartRef.current && favouritesTargetRef.current) {
       heartRef.current.measureInWindow((sx, sy, sw, sh) => {
         favouritesTargetRef.current.measureInWindow((ex, ey, ew, eh) => {
           animateToTarget(
@@ -188,15 +188,12 @@ export default function ActivityDetailsScreen({ route, navigation }) {
           timestamp: new Date().toISOString(),
         });
       }
-
-      //auto hide undo after 5 seconds
-      setTimeout(() => setUndoItem(null), 5000);
     } catch (err) {
       console.log(
-        "Favourite error", 
+        "Favourite error",
         err?.response?.status,
         err?.response?.data,
-        err.message
+        err.message,
       );
       setIsFav(previous);
     }
@@ -226,10 +223,10 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       setTimeout(() => setFeedbackMsg(null), 3000);
     } catch (err) {
       console.log(
-        "Rating save failed", 
+        "Rating save failed",
         err?.response?.status,
         err?.response?.data,
-        err.message
+        err.message,
       );
       setRating(previous);
     }
@@ -256,10 +253,10 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       });
     } catch (err) {
       console.log(
-        "Helpful save error", 
+        "Helpful save error",
         err?.response?.status,
         err?.response?.data,
-        err.message
+        err.message,
       );
       setHelpfulState(previous);
     }
@@ -689,11 +686,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3e8ff",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12
+    marginRight: 12,
   },
 
   feedbackEmoji: {
-    fontSize: 18
+    fontSize: 18,
   },
 
   feedbackTitle: {

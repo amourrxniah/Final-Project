@@ -260,7 +260,7 @@ export const getUserActivities = async () => {
 /* -------------------- FAVOURITE ACTIVITY -------------------- */
 export const addFavourite = async (activityId) => {
   const res = await api.post("/favourites", {
-    activity_id: activityId,
+    activity_id: String(activityId),
   });
 
   return res.data;
@@ -289,7 +289,7 @@ export const sendActivityFeedback = async ({
   feedback,
 }) => {
   const res = await api.post("/feedback/", {
-    activity_id: activityId,
+    activity_id: String(activityId),
     rating,
     feedback,
   });
