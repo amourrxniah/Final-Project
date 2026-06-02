@@ -19,10 +19,16 @@ def save_feedback(
     rating = data.rating
 
     #check if feedback already exists
-    existing = db.query(Feedback).filter(
-        Feedback.user_id == user.id,
-        Feedback.activity_id == activity_id
-    ).first()
+    if str(activity_id).startswith("wb_"):
+        existing = db.query(Feedback).filter(
+            Feedback.user_id == user.id,
+            Feedback.virtual_activity_id == activity_id
+        ).first()
+    else:
+        existing = db.query(Feedback).filter(
+            Feedback.user_id == user.id,
+            Feedback.activity_id == int(activity_id)
+        ).first()
 
     if existing:
 
@@ -32,6 +38,14 @@ def save_feedback(
         if rating is not None:
             existing.rating = rating
 
+    if str(activity_id).startswith("wb_"):
+        new_feedback = Feedback(
+            user_id=user.id,
+            virtual_activity_id=activity_id,
+            type=feedback_type,
+            rating=rating
+        )
+        
     else:
         new_feedback = Feedback(
             user_id=user.id,
@@ -52,10 +66,16 @@ def get_feedback(
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
-    feedback = db.query(Feedback).filter(
-        Feedback.user_id == user.id,
-        Feedback.activity_id == activity_id
-    ).first()
+    if activity_id.startswith("wb_"):
+        feedback = db.query(Feedback).filter(
+            Feedback.user_id == user.id,
+            Feedback.virtual_activity_id == activity_id
+        ).first()
+    else:
+        feedback = db.query(Feedback).filter(
+            Feedback.user_id == user.id,
+            Feedback.activity_id == activity_id
+        ).first()
 
     if not feedback:
         return {}
