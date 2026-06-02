@@ -328,7 +328,9 @@ export default function ProfileScreen({ navigation }) {
       navigation.navigate("Accounts");
     }
     if (type === "privacy") {
-      navigation.navigate("Privacy");
+      navigation.navigate("Privacy", {
+        fromProfile: true
+      });
     }
     if (type === "delete") {
       Alert.alert("Delete Account", "Not implemented yet");

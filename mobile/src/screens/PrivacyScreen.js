@@ -11,7 +11,7 @@ import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { useState, useEffect } from "react";
 import { checkConsent, acceptConsent } from "../components/api";
 
-export default function PrivacyScreen({ navigation }) {
+export default function PrivacyScreen({ navigation, route }) {
   const [showModal, setShowModal] = useState(false);
 
   const [checks, setChecks] = useState({
@@ -31,7 +31,8 @@ export default function PrivacyScreen({ navigation }) {
     const init = async () => {
       const consent = await checkConsent();
 
-      if (consent) {
+      // only redirect during onboarding
+      if (consent && !route?.params?.fromProfile) {
         navigation.replace("AuthChoice");
       }
     };
