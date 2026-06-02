@@ -111,15 +111,22 @@ export default function ActivityDetailsScreen({ route, navigation }) {
   const loadUserState = async () => {
     try {
       const fav = await getFavouriteState(activity.id);
+      console.log("Favourite state", fav);
       setIsFav(fav?.is_favourite || false);
 
       const feedback = await getActivityFeedback(activity.id);
+      console.log("Activity feedback", feedback);
       setRating(feedback?.rating || 0);
       setHelpfulState(feedback?.feedback || null);
 
       await logActivityOpen(activity.id);
     } catch (err) {
-      console.log("Load user state error", err?.response?.data || err.message);
+      console.log(
+        "Load user state error", 
+        err?.response?.status,
+        err?.response?.data,
+        err.message
+      );
     }
   };
 
@@ -181,7 +188,12 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       //auto hide undo after 5 seconds
       setTimeout(() => setUndoItem(null), 5000);
     } catch (err) {
-      console.log("Favourite error", err);
+      console.log(
+        "Favourite error", 
+        err?.response?.status,
+        err?.response?.data,
+        err.message
+      );
       setIsFav(previous);
     }
   };
@@ -209,7 +221,12 @@ export default function ActivityDetailsScreen({ route, navigation }) {
       setFeedbackMsg(true);
       setTimeout(() => setFeedbackMsg(null), 3000);
     } catch (err) {
-      console.log("Rating save failed", err?.data || err.message);
+      console.log(
+        "Rating save failed", 
+        err?.response?.status,
+        err?.response?.data,
+        err.message
+      );
       setRating(previous);
     }
   };
@@ -234,7 +251,12 @@ export default function ActivityDetailsScreen({ route, navigation }) {
         timestamp: new Date().toISOString(),
       });
     } catch (err) {
-      console.log("Helpful save error", err);
+      console.log(
+        "Helpful save error", 
+        err?.response?.status,
+        err?.response?.data,
+        err.message
+      );
       setHelpfulState(previous);
     }
   };
