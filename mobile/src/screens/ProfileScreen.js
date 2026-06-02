@@ -529,80 +529,89 @@ export default function ProfileScreen({ navigation }) {
                   <Text style={styles.sectionTitle}>Recent Activity</Text>
                 </View>
 
-                {!activities.length ? (
-                  <Text style={styles.emptyText}>No activity yet</Text>
-                ) : (
-                  <FlatList
-                    data={activities}
-                    keyExtractor={(item, index) =>
-                      item.id?.toString() || index.toString()
-                    }
-                    showsVerticalScrollIndicator={false}
-                    nestedScrollEnabled
-                    scrollEnabled={true}
-                    style={{ height: 210 }}
-                    contentContainerStyle={{ paddingBottom: 10 }}
-                    renderItem={({ item }) => {
-                      const style = getActivityStyle(item);
+                <View style={styles.activitySectionCard}>
+                  {!activities.length ? (
+                    <View style={styles.emptyActivityWrap}>
+                      <MaterialCommunityIcons
+                        name="compass-outline"
+                        size={40}
+                        color="#bbb"
+                      />
+                      <Text style={styles.emptyText}>No activity yet</Text>
+                    </View>
+                  ) : (
+                    <FlatList
+                      data={activities}
+                      keyExtractor={(item, index) =>
+                        item.id?.toString() || index.toString()
+                      }
+                      nestedScrollEnabled
+                      scrollEnabled
+                      showsVerticalScrollIndicator={false}
+                      style={styles.activityList}
+                      contentContainerStyle={styles.activityListContent}
+                      renderItem={({ item }) => {
+                        const style = getActivityStyle(item);
 
-                      return (
-                        <TouchableOpacity
-                          style={styles.activityRow}
-                          onPress={() =>
-                            navigation.navigate("ActivityDetails", {
-                              activity: item,
-                            })
-                          }
-                        >
-                          <View
-                            style={[
-                              styles.activityIcon,
-                              { backgroundColor: style.bg },
-                            ]}
+                        return (
+                          <TouchableOpacity
+                            style={styles.activityRow}
+                            onPress={() =>
+                              navigation.navigate("ActivityDetails", {
+                                activity: item,
+                              })
+                            }
                           >
-                            <MaterialCommunityIcons
-                              name={style.icon}
-                              size={20}
-                              color={style.color}
-                            />
-                          </View>
-
-                          <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={styles.activityTitle}>
-                              {item.title?.trim() || "Activity"}
-                            </Text>
-
-                            <Text style={styles.activitySubtitle}>
-                              {shortenLocation(item.subtitle)}
-                            </Text>
-                          </View>
-
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 6,
-                            }}
-                          >
-                            {item.is_liked && (
+                            <View
+                              style={[
+                                styles.activityIcon,
+                                { backgroundColor: style.bg },
+                              ]}
+                            >
                               <MaterialCommunityIcons
-                                name="heart"
-                                size={18}
-                                color="#ef476f"
+                                name={style.icon}
+                                size={20}
+                                color={style.color}
                               />
-                            )}
+                            </View>
 
-                            <MaterialCommunityIcons
-                              name="chevron-right"
-                              size={20}
-                              color="#999"
-                            />
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    }}
-                  />
-                )}
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                              <Text style={styles.activityTitle}>
+                                {item.title?.trim() || "Activity"}
+                              </Text>
+
+                              <Text style={styles.activitySubtitle}>
+                                {shortenLocation(item.subtitle)}
+                              </Text>
+                            </View>
+
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              {item.is_liked && (
+                                <MaterialCommunityIcons
+                                  name="heart"
+                                  size={18}
+                                  color="#ef476f"
+                                />
+                              )}
+
+                              <MaterialCommunityIcons
+                                name="chevron-right"
+                                size={20}
+                                color="#999"
+                              />
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      }}
+                    />
+                  )}
+                </View>
               </View>
 
               {/* MENU */}
@@ -622,6 +631,7 @@ export default function ProfileScreen({ navigation }) {
                 <MenuItem
                   text="Delete Account"
                   danger
+                  last
                   onPress={() => handleMenu("delete")}
                 />
               </View>
@@ -747,8 +757,11 @@ const Achievement = ({ title, desc, icon, color, completed }) => (
   </View>
 );
 
-const MenuItem = ({ text, danger, onPress }) => (
-  <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+const MenuItem = ({ text, danger, onPress, last }) => (
+  <TouchableOpacity
+    style={[styles.menuItem, last && { borderBottomWidth: 0 }]}
+    onPress={onPress}
+  >
     <Text style={[styles.menuText, danger && { color: "red" }]}>{text}</Text>
   </TouchableOpacity>
 );
@@ -905,11 +918,12 @@ const styles = StyleSheet.create({
   activityRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#f8f9ff",
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 18,
     marginBottom: 10,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#edf0ff",
   },
 
   activityIcon: {
@@ -976,6 +990,31 @@ const styles = StyleSheet.create({
     color: "#999",
   },
 
+  activitySectionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 14,
+    elevation: 4,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+  },
+
+  activityList: {
+    maxHeight: 280,
+  },
+
+  activityListContent: {
+    paddingBottom: 4,
+  },
+
+  emptyActivityWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 30,
+  },
+
   emptyText: {
     color: "#999",
     marginTop: 10,
@@ -1001,13 +1040,21 @@ const styles = StyleSheet.create({
 
   menu: {
     backgroundColor: "#fff",
-    borderRadius: 16,
-    margin: 16,
+    borderRadius: 22,
+    marginTop: 18,
+    marginBottom: 40,
     padding: 20,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
 
   menuItem: {
-    padding: 14,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f1f1",
   },
 
   menuText: {

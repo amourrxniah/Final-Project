@@ -340,8 +340,13 @@ export default function ActivityDetailsScreen({ route, navigation }) {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.feedbackTitle}>Thanks for the feedback !!</Text>
-                <Text style={styles.feedbackText}> We'll improve your future recommendations</Text>
+                <Text style={styles.feedbackTitle}>
+                  Thanks for the feedback !!
+                </Text>
+                <Text style={styles.feedbackText}>
+                  {" "}
+                  We'll improve your future recommendations
+                </Text>
               </View>
             </Animated.View>
           )}
@@ -633,6 +638,47 @@ const styles = StyleSheet.create({
   },
 
   feedbackCard: {
-    
-  }
+    marginTop: 18,
+    marginHorizontal: 4,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+
+    borderWidth: 1,
+    borderColor: "#efe8ff",
+  },
+
+  feedbackIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#f3e8ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12
+  },
+
+  feedbackEmoji: {
+    fontSize: 18
+  },
+
+  feedbackTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#333",
+  },
+
+  feedbackText: {
+    color: "#777",
+    marginTop: 2,
+    lineHeight: 18,
+  },
 });
